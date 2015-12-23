@@ -51,16 +51,19 @@ class Simulator(object):
     @staticmethod
     def simulate(dwarf,instrument,exp=10000):
         """ Simulate observation """
-        g,r,ra,dec = dwarf.simulate()
-        snr = instrument.mag2snr(g,exp)
+
+        # Set the second band to 'i' (matches CaT lines)
+        dwarf.band_1 = 'g'; dwarf.band_2 = 'i'
+        mag_1,mag_2,ra,dec = dwarf.simulate()        
+        snr = instrument.mag2snr(mag_2,exp)
      
         #olderr = np.seterr(all='ignore')
-        sel = (g > 17) & (snr > 5)
+        sel = (mag_1 > 16) & (snr > 5)
         #np.seterr(**olderr)
        
         nstar = sel.sum()
-        mag = g[sel]
-        color = (g-r)[sel]
+        mag = mag_1[sel]
+        color = (mag_1-mag_2)[sel]
         snr = snr[sel]
 
         # The true velocity, u, of each star is the sum of the mean velocity and
@@ -86,8 +89,9 @@ class Simulator(object):
         # and the systematice error estimate in quadrature
         verr = np.sqrt(vstaterr**2 + vsyserr**2)
      
-        names = ['RA','DEC','MAG_G','MAG_R','SNR','VTRUE','VSTAT','VSYS','VMEAS','VMEASERR','VERR']
-        data = [ra[sel],dec[sel],g[sel],r[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
+        names = ['RA','DEC','MAG_%s'%dwarf.band_1.upper(),'MAG_%s'%dwarf.band_2.upper(),
+                 'SNR','VTRUE','VSTAT','VSYS','VMEAS','VMEASERR','VERR']
+        data = [ra[sel],dec[sel],mag_1[sel],mag_2[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
         return np.rec.fromarrays(data,names=names)
     
 if __name__ == "__main__":

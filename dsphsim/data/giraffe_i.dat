@@ -1,0 +1,37 @@
+# https://www.eso.org/observing/etc/bin/gen/form?INS.NAME=GIRAFFE+INS.MODE=spectro
+# Template: G0 (Pickles)
+# AB Magnitudes
+# Point Source
+# Moon Phase: 0
+# Airmass: 1.10
+# Seeing: 0.80 asec
+# Fiber Mode: Madusa (1.2 asec/microlense)
+# High Resolution: HR21 (875.7 nm)
+# Carreras CCD mode: standard
+# Reference Wavelength: 875.700 nm (mean signal to noise)
+#MAG   36000s 10000s 3600s 1000s 360s
+27.0   0.047
+26.5   0.075
+26.0   0.118
+25.5   0.187
+25.0   0.296
+24.5   0.469
+24.0   0.742
+23.5   1.172
+23.0   1.849
+22.5   2.910
+22.0   4.562
+21.5   7.108
+21.0   10.979
+20.5   16.746
+20.0   25.112
+19.5   36.858
+19.0   52.766
+18.5   73.580
+18.0   100.072
+17.5   133.200
+17.0   174.294
+16.5   225.204
+16.0   288.415
+15.5   367.154
+15.0   465.535

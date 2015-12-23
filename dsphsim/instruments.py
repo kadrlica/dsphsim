@@ -33,7 +33,6 @@ class Instrument(object):
 
     defaults = (
         ('vsys' , 2.0, 'Systematic eror (km/s)'),
-        ('vstat', 3.0, 'Statistical error (km/s)'),
         )
 
     def __init__(self, **kwargs):
@@ -52,22 +51,17 @@ class Instrument(object):
         self.__dict__.update(kwargs)
 
     @classmethod
+    def default_dict(cls):
+        return odict([(d[0],d[1]) for d in cls.defaults])
+
+    @classmethod
     def snr2err(cls, snr):
         """ This function converts from signal-to-noise ration (SNR)
         to statistical velocity uncertainty using a functional fit to
         data in Figure 1 of Simon & Geha 2007. """
         a,b = -1.2, 1.5
         return 10**(a*np.log10(snr) + b)
-
-    @classmethod
-    def default_dict(cls):
-        return odict([(d[0],d[1]) for d in cls.defaults])
         
-    @classmethod
-    def snr2err(cls, snr, err=None):
-        # Default to returning constant 3 km/s error
-        return self.vstat if err is None else err
-
     @classmethod
     def maglim2exp(cls, maglim):
         """ Convert exposure into 5sigma mag limit """
@@ -89,7 +83,7 @@ class GMACS(Instrument):
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
         basedir = os.path.dirname(os.path.abspath(__file__))
-        datafile = os.path.join(basedir,'..','data','gmacs.dat')
+        datafile = os.path.join(basedir,'data','gmacs_i.dat')
         # g-band magnitude to snr file
         _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
         exp0 = 36000.
@@ -104,6 +98,17 @@ class DEIMOS(Instrument):
         ('vsys',2.0, 'Systematic eror (km/s)'),
         )
 
+    @classmethod
+    def mag2snr(cls, mag, exp=1000.):
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        datafile = os.path.join(basedir,'data','deimos_i.dat')
+        # g-band magnitude to snr file
+        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
+        exp0 = 36000.
+        interp = interp1d(_mag,_snr,bounds_error=False)
+        return interp(mag) * np.sqrt(exp/exp0)
+
+
 class M2FS(Instrument):
     """ M2FS """
 
@@ -111,12 +116,23 @@ class M2FS(Instrument):
         ('vsys',0.5, 'Systematic eror (km/s)'),
         )
 
-class FLAMES(Instrument):
-    """ FLAMES """
+class GIRAFFE(Instrument):
+    """ GIRAFFE """
 
     defaults = (
         ('vsys',0.5, 'Systematic eror (km/s)'),
         )
+
+    @classmethod
+    def mag2snr(cls, mag, exp=1000.):
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        datafile = os.path.join(basedir,'data','giraffe_i.dat')
+        # g-band magnitude to snr file
+        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
+        exp0 = 36000.
+        interp = interp1d(_mag,_snr,bounds_error=False)
+        return interp(mag) * np.sqrt(exp/exp0)
+
 
 if __name__ == "__main__":
     import argparse

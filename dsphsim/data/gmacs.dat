@@ -1,14 +1,14 @@
-# SNR = 5 for 180 at g = 23
-# SNR = 5 for 1000 at g = 24
-# SNR = 5 for 5000 at g = 25
-# SNR = 5 for 36000s at g = 26
-
+# http://instrumentation.tamu.edu/cgi-bin/gmacs.cgi
 # Full size (7 mirrors)
 # G0V Star
 # High resolution grating
 # g-band magnitude (AB) system
 # Binned Pixel Scale: 1.4
 # S/N measured at 8600A (plot 8000-9000)
+# SNR = 5 for 180 at g = 23
+# SNR = 5 for 1000 at g = 24
+# SNR = 5 for 5000 at g = 25
+# SNR = 5 for 36000s at g = 26
 #MAG   36000s 10000s 3600s 1000s 360s
 27.0   1.4    NaN    0.43  NaN   0.14
 26.5   2.1    NaN    NaN   NaN   NaN  
@@ -32,4 +32,4 @@
 17.5   1330   NaN    NaN   NaN   NaN  
 17.0   1675   NaN    530   NaN   169  
 16.5   2100   NaN    NaN   NaN   NaN  
-16.0   2680   NaN    850   NaN   268  
+16.0   2680   NaN    850   NaN   268

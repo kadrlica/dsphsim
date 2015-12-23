@@ -1,0 +1,38 @@
+# http://instrumentation.tamu.edu/cgi-bin/gmacs.cgi
+# Full size (7 mirrors)
+# G0V Star
+# High resolution grating
+# i-band magnitude (AB) system
+# Seeing: 0.5 asec
+# Slit width: 0.7 asec
+# Start Wavelength: 8000
+# Stop Wavelength: 9000
+# Binned Pixel Scale: 1.4
+# S/N measured at 8600A 
+# i-band magnitudes
+#MAG   36000s 10000s 3600s 1000s 360s
+27.0   1.4    NaN    NaN   NaN   NaN
+26.5   2.25   NaN    NaN   NaN   NaN
+26.0   3.6    NaN    NaN   NaN   NaN 
+25.5   5.75   NaN    NaN   NaN   NaN
+25.0   9.0    NaN    NaN   NaN   NaN
+24.5   14.0   NaN    NaN   NaN   NaN
+24.0   22.5   NaN    NaN   NaN   NaN
+23.5   35     NaN    NaN   NaN   NaN
+23.0   54     NaN    NaN   NaN   NaN
+22.5   82     NaN    NaN   NaN   NaN
+22.0   122    NaN    NaN   NaN   NaN
+21.5   180    NaN    NaN   NaN   NaN
+21.0   255    NaN    NaN   NaN   NaN
+20.5   360    NaN    NaN   NaN   NaN
+20.0   490    NaN    NaN   NaN   NaN
+19.5   650    NaN    NaN   NaN   NaN
+19.0   850    NaN    NaN   NaN   NaN
+18.5   1100   NaN    NaN   NaN   NaN
+18.0   1410   NaN    NaN   NaN   NaN
+17.5   1800   NaN    NaN   NaN   NaN
+17.0   2280   NaN    NaN   NaN   NaN
+16.5   2880   NaN    NaN   NaN   NaN
+16.0   3620   NaN    NaN   NaN   NaN
+15.5   4590   NaN    NaN   NaN   NaN
+15.0   5800   NaN    NaN   NaN   NaN
