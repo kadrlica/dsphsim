@@ -52,6 +52,14 @@ class Instrument(object):
         self.__dict__.update(kwargs)
 
     @classmethod
+    def snr2err(cls, snr):
+        """ This function converts from signal-to-noise ration (SNR)
+        to statistical velocity uncertainty using a functional fit to
+        data in Figure 1 of Simon & Geha 2007. """
+        a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
+
+    @classmethod
     def default_dict(cls):
         return odict([(d[0],d[1]) for d in cls.defaults])
         
@@ -79,11 +87,6 @@ class GMACS(Instrument):
         )
 
     @classmethod
-    def snr2err(cls, snr):
-        a,b = -1.2, 1.5
-        return 10**(a*np.log10(snr) + b)
-
-    @classmethod
     def mag2snr(cls, mag, exp=1000.):
         basedir = os.path.dirname(os.path.abspath(__file__))
         datafile = os.path.join(basedir,'..','data','gmacs.dat')
@@ -93,6 +96,27 @@ class GMACS(Instrument):
         interp = interp1d(_mag,_snr,bounds_error=False)
         return interp(mag) * np.sqrt(exp/exp0)
     
+
+class DEIMOS(Instrument):
+    """ DEIMOS """
+
+    defaults = (
+        ('vsys',2.0, 'Systematic eror (km/s)'),
+        )
+
+class M2FS(Instrument):
+    """ M2FS """
+
+    defaults = (
+        ('vsys',0.5, 'Systematic eror (km/s)'),
+        )
+
+class FLAMES(Instrument):
+    """ FLAMES """
+
+    defaults = (
+        ('vsys',0.5, 'Systematic eror (km/s)'),
+        )
 
 if __name__ == "__main__":
     import argparse
