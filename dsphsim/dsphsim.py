@@ -13,7 +13,7 @@ from multiprocessing import Pool
 import scipy.stats as stats
 
 from dwarf import Dwarf
-import instrument
+from instruments import factory as instrumentFactory
 
 
 def randerr(size=1,func='normal',**kwargs):
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     dwarf.richness = args.stellar_mass/dwarf.isochrone.stellar_mass()
 
 
-    instr= instrument.factory(args.instrument)
+    instr= instrumentFactory(args.instrument)
     if args.vsys is not None: instrument.vsys = args.vsys
 
     # Run the simulation
@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     # Output
     if args.outfile:
-        out = open(outfile,'rw')
+        out = open(args.outfile,'w')
     else:
         out = sys.stdout
     out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
