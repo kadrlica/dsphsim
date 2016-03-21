@@ -15,7 +15,6 @@ import scipy.stats as stats
 from dwarf import Dwarf
 import instrument
 
-np.random.seed(0)
 
 def randerr(size=1,func='normal',**kwargs):
     """ Return a sample from a random variate. """
@@ -100,6 +99,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('outfile',nargs='?',
                         help="Optional output file")
+    parser.add_argument('--seed',type=int,default=None
+                        help="Random seed")
+
     group = parser.add_argument_group('Physical')
     parser.add_argument('--stellar_mass',type=float,default=2000.,
                         help='Stellar mass for simulated satellite (Msun)')
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     group = parser.add_argument_group('Isochrone')
     group.add_argument('--isochrone',type=str,default='Bressan2012',
                         help='Isochrone type.')
-    group.add_argument('--distance_modulus',type=float,
+    group.add_argument('--distance_modulus',type=float,default=17.5,
                         help='Distance modulus.')
     group.add_argument('--age',type=float,default=13.0,
                        help='Age of stellar population (Gyr).')
@@ -145,6 +147,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = vars(args)
 
+    np.random.seed(args.seed)
+
     exptime = mag2exp(args.maglim) if args.maglim else args.exptime
 
     dwarf = Dwarf(vmean=args.vmean,vdisp=args.vdisp)
@@ -174,3 +178,4 @@ if __name__ == "__main__":
         out = sys.stdout
     out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
     np.savetxt(out,data,fmt='%-9.5f')
+
