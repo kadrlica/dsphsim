@@ -2,6 +2,7 @@
 import os,sys
 from collections import OrderedDict as odict
 import inspect
+import copy
 
 import numpy as np
 from scipy.interpolate import interp1d
