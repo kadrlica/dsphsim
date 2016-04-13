@@ -1,0 +1,21 @@
+# Based on Simon et al 2015
+# 7200 s exposure
+# wavelength range: 5120−5190 (Mg b region)
+# High resolution R~25,000
+# g-band magnitude (AB) system
+#
+# SNR = 5 for 180 at g = 23
+#
+#MAG    7200s
+27       0
+22       0.5
+21.5     0.8
+21.0     1.3
+20.5     2.1
+20.0     3.2
+19.5     5.5
+19.0     7.5
+18.5     11.3
+18.0     14.0
+17.5     20.0
+

@@ -2,7 +2,6 @@
 import os,sys
 from collections import OrderedDict as odict
 import inspect
-import copy
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -32,11 +31,9 @@ def factory(name, **kwargs):
 class Instrument(object):
     """ Base class for various spectroscopic instruments. """
 
-    _defaults = odict([
-        ('vsys' , 2.0), # Systematic eror (km/s)
-        ('fov',   50),  # Field of View (arcmin^2)
-        ('nstar', 50),  # Number of stars per pointing
-    ])
+    defaults = (
+        ('vsys' , 2.0, 'Systematic eror (km/s)'),
+        )
 
     def __init__(self, **kwargs):
         self._setup(**kwargs)
@@ -55,16 +52,8 @@ class Instrument(object):
 
     @classmethod
     def default_dict(cls):
-        return copy.deepcopy(cls._defaults)
+        return odict([(d[0],d[1]) for d in cls.defaults])
 
-    @classmethod
-    def snr2err(cls, snr):
-        """ This function converts from signal-to-noise ration (SNR)
-        to statistical velocity uncertainty using a functional fit to
-        data in Figure 1 of Simon & Geha 2007. """
-        a,b = -1.2, 1.5
-        return 10**(a*np.log10(snr) + b)
-        
     @classmethod
     def maglim2exp(cls, maglim):
         """ Convert exposure into 5sigma mag limit """
@@ -77,16 +66,11 @@ class Instrument(object):
         return brentq(f,16,27,args=(e))
 
 class GMACS(Instrument):
-    """Giant Magellan Telescope Multi-object Astronomical and
-    Cosmological Spectrograph (GMACS)
-    http://instrumentation.tamu.edu/gmacs.html
-    """
-                      
-    _defaults = odict([
-        ('vsys',2.0),
-        ('fov', 50),
-        ('nstar', 50),
-    ])
+    """ GMACS, assuming the systematic floor is 2.0 km/s """
+
+    defaults = (
+        ('vsys',2.0, 'Systematic error (km/s)'),
+        )
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
@@ -97,18 +81,21 @@ class GMACS(Instrument):
         exp0 = 36000.
         interp = interp1d(_mag,_snr,bounds_error=False)
         return interp(mag) * np.sqrt(exp/exp0)
-    
+
+    @classmethod
+    def snr2err(cls, snr):
+        """ copying from DEIMOS
+         assuming that DEIMOS and GMACS will have the same spectral
+         resolution and thus same snr vs v_error relation"""
+        a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
 
 class DEIMOS(Instrument):
-    """DEep Imaging Multi-Object Spectrograph (DEIMOS)
-    http://www2.keck.hawaii.edu/inst/deimos/specs.html
-    """
+    """ DEIMOS """
 
-    _defaults = odict([
-        ('vsys',2.0),
-        ('fov',0.0232),
-        ('nstar',40),
-    ])
+    defaults = (
+        ('vsys',2.2, 'Systematic error (km/s)'),
+        )
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
@@ -120,25 +107,44 @@ class DEIMOS(Instrument):
         interp = interp1d(_mag,_snr,bounds_error=False)
         return interp(mag) * np.sqrt(exp/exp0)
 
+    @classmethod
+    def snr2err(cls, snr):
+        """ This function converts from signal-to-noise ration (SNR)
+        to statistical velocity uncertainty using a functional fit to
+        data in Figure 1 of Simon & Geha 2007. """
+        a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
 
 class M2FS(Instrument):
-    """Michigan/Magellan Fiber System (M2FS)
-    """
+    """ M2FS """
 
-    _defaults = odict([
-        ('vsys',0.5),
-        ('fov', 0.196),
-        ('nstar',256),
-    ])
+    defaults = (
+        ('vsys',0.9, 'Systematic error (km/s)'),
+        )
+
+    @classmethod
+    def mag2snr(cls, mag, exp=1000.):
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        datafile = os.path.join(basedir,'data','m2fs.dat')
+        # g-band magnitude to snr file
+        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
+        exp0 = 7200.
+        interp = interp1d(_mag,_snr,bounds_error=False)
+        return interp(mag) * np.sqrt(exp/exp0)
+
+    @classmethod
+    def snr2err(cls, snr):
+        # This is for M2FS based on Simon et al. 2015
+        # derived in a similar way as for DEIMOS
+        a,b = -1.04, 0.7745
+        return 10**(a*np.log10(snr) + b)
 
 class GIRAFFE(Instrument):
-    """GIRAFFE """
+    """ GIRAFFE, assuming systematic floor is 0.5km/s, need to be verified later """
 
-    _defaults = odict([
-        ('vsys',0.5),
-        ('fov',0.136),
-        ('nstar',132),
-    ])
+    defaults = (
+        ('vsys',0.5, 'Systematic error (km/s)'),
+        )
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
@@ -150,6 +156,11 @@ class GIRAFFE(Instrument):
         interp = interp1d(_mag,_snr,bounds_error=False)
         return interp(mag) * np.sqrt(exp/exp0)
 
+    @classmethod
+    def snr2err(cls, snr):
+        # copying from DEIMOS, Need to be changed later
+        a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
 
 if __name__ == "__main__":
     import argparse
