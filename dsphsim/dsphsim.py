@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('outfile',nargs='?',
                         help="Optional output file")
-    parser.add_argument('--seed',type=int,default=None
+    parser.add_argument('--seed',type=int,default=None,
                         help="Random seed")
 
     group = parser.add_argument_group('Physical')

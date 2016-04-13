@@ -31,9 +31,11 @@ def factory(name, **kwargs):
 class Instrument(object):
     """ Base class for various spectroscopic instruments. """
 
-    defaults = (
-        ('vsys' , 2.0, 'Systematic eror (km/s)'),
-        )
+    _defaults = odict([
+        ('vsys' , 2.0), # Systematic eror (km/s)
+        ('fov',   50),  # Field of View (arcmin^2)
+        ('nstar', 50),  # Number of stars per pointing
+    ])
 
     def __init__(self, **kwargs):
         self._setup(**kwargs)
@@ -52,7 +54,7 @@ class Instrument(object):
 
     @classmethod
     def default_dict(cls):
-        return odict([(d[0],d[1]) for d in cls.defaults])
+        return copy.deepcopy(cls._defaults)
 
     @classmethod
     def snr2err(cls, snr):
@@ -74,11 +76,16 @@ class Instrument(object):
         return brentq(f,16,27,args=(e))
 
 class GMACS(Instrument):
-    """ GMACS """
-
-    defaults = (
-        ('vsys',2.0, 'Systematic eror (km/s)'),
-        )
+    """Giant Magellan Telescope Multi-object Astronomical and
+    Cosmological Spectrograph (GMACS)
+    http://instrumentation.tamu.edu/gmacs.html
+    """
+                      
+    _defaults = odict([
+        ('vsys',2.0),
+        ('fov', 50),
+        ('nstar', 50),
+    ])
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
@@ -92,11 +99,15 @@ class GMACS(Instrument):
     
 
 class DEIMOS(Instrument):
-    """ DEIMOS """
+    """DEep Imaging Multi-Object Spectrograph (DEIMOS)
+    http://www2.keck.hawaii.edu/inst/deimos/specs.html
+    """
 
-    defaults = (
-        ('vsys',2.0, 'Systematic eror (km/s)'),
-        )
+    _defaults = odict([
+        ('vsys',2.0),
+        ('fov',0.0232),
+        ('nstar',40),
+    ])
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
@@ -110,18 +121,23 @@ class DEIMOS(Instrument):
 
 
 class M2FS(Instrument):
-    """ M2FS """
+    """Michigan/Magellan Fiber System (M2FS)
+    """
 
-    defaults = (
-        ('vsys',0.5, 'Systematic eror (km/s)'),
-        )
+    _defaults = odict([
+        ('vsys',0.5),
+        ('fov', 0.196),
+        ('nstar',256),
+    ])
 
 class GIRAFFE(Instrument):
-    """ GIRAFFE """
+    """GIRAFFE """
 
-    defaults = (
-        ('vsys',0.5, 'Systematic eror (km/s)'),
-        )
+    _defaults = odict([
+        ('vsys',0.5),
+        ('fov',0.136),
+        ('nstar',132),
+    ])
 
     @classmethod
     def mag2snr(cls, mag, exp=1000.):
