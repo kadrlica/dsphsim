@@ -1,0 +1,3 @@
+include versioneer.py
+include pymodeler/_version.py
+include dsphsim/_version.py

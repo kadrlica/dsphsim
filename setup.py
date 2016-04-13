@@ -2,6 +2,7 @@ import sys
 import os
 try: from setuptools import setup
 except ImportError: from distutils.core import setup
+import versioneer
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -10,7 +11,8 @@ def read(filename):
 
 setup(
     name='dsphsim',
-    version="0.0.0",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     url='https://github.com/kadrlica/dsphsim',
     author='Alex Drlica-Wagner',
     author_email='kadrlica@fnal.gov',
