@@ -95,7 +95,7 @@ class Simulator(object):
     
 if __name__ == "__main__":
     import argparse
-    description = "python script"
+    description = "Simulate the observable properties of a dwarf galaxy."
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('outfile',nargs='?',
                         help="Optional output file")
@@ -178,4 +178,3 @@ if __name__ == "__main__":
         out = sys.stdout
     out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
     np.savetxt(out,data,fmt='%-9.5f')
-
