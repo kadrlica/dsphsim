@@ -148,6 +148,11 @@ class GIRAFFE(Instrument):
         _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
         exp0 = 36000.
         interp = interp1d(_mag,_snr,bounds_error=False)
+        # Somewhere around here would be a place to hack the SNR given
+        # the finite FoV and coverage fraction of each instrument...
+        nstar = len(np.asarray(mag))
+        #...
+
         return interp(mag) * np.sqrt(exp/exp0)
 
 
