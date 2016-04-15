@@ -31,7 +31,9 @@ def factory(name, **kwargs):
 
 class Instrument(object):
     """ Base class for various spectroscopic instruments. """
-
+    _datadir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'data')
+    _filename = 'inst.dat'
+    _exptime0 = 36000.
     _defaults = odict([
         ('vsys' , 2.0), # Systematic eror (km/s)
         ('fov',   50),  # Field of View (arcmin^2)
@@ -68,6 +70,16 @@ class Instrument(object):
         f = lambda m,e: cls.mag2snr(m,e) - 5
         return brentq(f,16,27,args=(e))
 
+    @classmethod
+    def mag2snr(cls, mag, exp=1000.):
+        datafile = os.path.join(cls._datadir,cls._filename)
+        # g-band magnitude to snr file
+        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
+        exp0 = cls._exptime0
+        interp = interp1d(_mag,_snr,bounds_error=False)
+        return interp(mag) * np.sqrt(exp/exp0)
+
+
 class GMACS(Instrument):
     """Giant Magellan Telescope Multi-object Astronomical and
     Cosmological Spectrograph (GMACS)
@@ -76,21 +88,12 @@ class GMACS(Instrument):
     Assume a systematic floor of 2.0 km/s
     """
 
+    _filename = 'gmacs_i.dat'
     _defaults = odict([
         ('vsys',2.0),
         ('fov', 50),
         ('nstar', 50),
     ])
-
-    @classmethod
-    def mag2snr(cls, mag, exp=1000.):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        datafile = os.path.join(basedir,'data','gmacs_i.dat')
-        # g-band magnitude to snr file
-        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
-        exp0 = 36000.
-        interp = interp1d(_mag,_snr,bounds_error=False)
-        return interp(mag) * np.sqrt(exp/exp0)
 
     @classmethod
     def snr2err(cls, snr):
@@ -105,21 +108,12 @@ class DEIMOS(Instrument):
     http://www2.keck.hawaii.edu/inst/deimos/specs.html
     """
 
+    _filename = 'deimos_i.dat'
     _defaults = odict([
         ('vsys',2.0),
         ('fov',0.0232),
         ('nstar',40),
     ])
-
-    @classmethod
-    def mag2snr(cls, mag, exp=1000.):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        datafile = os.path.join(basedir,'data','deimos_i.dat')
-        # g-band magnitude to snr file
-        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
-        exp0 = 36000.
-        interp = interp1d(_mag,_snr,bounds_error=False)
-        return interp(mag) * np.sqrt(exp/exp0)
 
     @classmethod
     def snr2err(cls, snr):
@@ -132,22 +126,13 @@ class DEIMOS(Instrument):
 class M2FS(Instrument):
     """Michigan/Magellan Fiber System (M2FS)
     """
-
+    _filename = 'm2fs.dat'
+    _exptime0 = 7200.
     _defaults = odict([
         ('vsys',0.9),
         ('fov', 0.196),
         ('nstar',256),
     ])
-
-    @classmethod
-    def mag2snr(cls, mag, exp=1000.):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        datafile = os.path.join(basedir,'data','m2fs.dat')
-        # g-band magnitude to snr file
-        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
-        exp0 = 7200.
-        interp = interp1d(_mag,_snr,bounds_error=False)
-        return interp(mag) * np.sqrt(exp/exp0)
 
     @classmethod
     def snr2err(cls, snr):
@@ -159,26 +144,12 @@ class M2FS(Instrument):
 class GIRAFFE(Instrument):
     """ GIRAFFE, assuming systematic floor is 0.5km/s, need to be verified later """
 
+    _filename = 'giraffe_i.dat'
     _defaults = odict([
         ('vsys',0.5),
         ('fov',0.136),
         ('nstar',132),
     ])
-
-    @classmethod
-    def mag2snr(cls, mag, exp=1000.):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        datafile = os.path.join(basedir,'data','giraffe_i.dat')
-        # g-band magnitude to snr file
-        _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
-        exp0 = 36000.
-        interp = interp1d(_mag,_snr,bounds_error=False)
-        # Somewhere around here would be a place to hack the SNR given
-        # the finite FoV and coverage fraction of each instrument...
-        nstar = len(np.asarray(mag))
-        #...
-
-        return interp(mag) * np.sqrt(exp/exp0)
 
     @classmethod
     def snr2err(cls, snr):
