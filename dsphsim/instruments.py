@@ -6,7 +6,10 @@ import copy
 
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.optimize import brentq
 
+MAGMIN = 16
+MAGMAX = 27
 
 def factory(name, **kwargs):
     """
@@ -55,29 +58,37 @@ class Instrument(object):
         
         self.__dict__.update(kwargs)
 
+
     @classmethod
     def default_dict(cls):
         return copy.deepcopy(cls._defaults)
 
     @classmethod
-    def maglim2exp(cls, maglim):
-        """ Convert exposure into 5sigma mag limit """
-        f = lambda e,m: cls.mag2snr(m,e) - 5
-        return brentq(f,0,1e5,args=(maglim))
-
-    @classmethod
-    def exp2maglim(cls, exp):
-        f = lambda m,e: cls.mag2snr(m,e) - 5
-        return brentq(f,16,27,args=(e))
-
-    @classmethod
     def mag2snr(cls, mag, exp=1000.):
+        """Convert stellar magnitude into SNR for given exposure time."""
+        # magnitude to snr file
         datafile = os.path.join(cls._datadir,cls._filename)
-        # g-band magnitude to snr file
         _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
         exp0 = cls._exptime0
         interp = interp1d(_mag,_snr,bounds_error=False)
         return interp(mag) * np.sqrt(exp/exp0)
+
+    @classmethod
+    def maglim2exp(cls, maglim, snr=5):
+        """Convert 5-sigma limiting magnitude into exposure time"""
+        f = lambda e,m: cls.mag2snr(m,e) - snr
+        _mag = np.linspace(MAGMIN,MAGMAX,25)
+        _exp = [brentq(f,0,1e6,args=(_m)) for _m in _mag]
+        interp = interp1d(_mag,_exp,bounds_error=False)
+        return interp(maglim)
+
+    @classmethod
+    def exp2maglim(cls, exp, snr=5):
+        """Convert exposure time into 5-sigma limiting magnitude"""
+        _mag = np.linspace(MAGMIN,MAGMAX,25)
+        _exp = cls.maglim2exp(_mag)
+        interp = interp1d(_exp,_mag,bounds_error=False)
+        return interp(exp)
 
 
 class GMACS(Instrument):

@@ -8,7 +8,6 @@ __version__ = "0.1.0"
 
 import os,sys
 import numpy as np
-from multiprocessing import Pool
 
 import scipy.stats as stats
 
