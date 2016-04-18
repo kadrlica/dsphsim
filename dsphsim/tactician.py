@@ -15,10 +15,9 @@ class Tactician(object):
         self.instrument = instrument
         self.exptime = exptime
         
-    def schedule(self, mags, exptime=None):
-        if exptime is None: exptime = self.exptime
-            
-        return self.instrument.mag2snr(mags)
+    def schedule(self, data, obstime=None):
+        if obstime is None: obstime = self.obstime
+        return self.instrument.mag2snr(data['mag'],obstime)
 
 
 class EqualTactician(Tactician): 
@@ -29,11 +28,11 @@ class EqualTactician(Tactician):
     4) Divide by new number of stars to get time per star
     5) Iterate until convergence
     """
-    def schedule(self, mags, exptime=None, snr_thresh=5):
-        if exptime is None: exptime = self.exptime
-
-        total_time = float(self.instrument.nstar * exptime)
-        eff_time = exptime 
+    def schedule(self, data, obstime=None, snr_thresh=5):
+        if obstime is None: obstime = self.obstime
+        mags = data['mag']
+        total_time = float(self.instrument.nstar * obstime)
+        eff_time = obstime 
         delta_time = np.inf
 
         i = 0
@@ -52,45 +51,52 @@ class EqualTactician(Tactician):
 
         return snr
 
-class EqualExpTactician(Tactician):
+class EqualTimeTactician(Tactician):
     """Integrate according to pseudo-exposures
 
     1) Sort the stars in order of brightness
     2) Only take exposures that would add new stars above threshould
 
-    This algorithm does not deal with overheads, which will be constant per exposure.
-    """
-    def schedule(self, mags, exptime=None, snr_thresh=5):
-        if exptime is None: exptime = self.exptime
+    This algorithm does not deal with overheads, which will be
+    constant per exposure.
 
-        total_time = float(exptime)
-        nstar = self.instrument.nstar
+    """
+    def schedule(self, data, obstime=None, snr_thresh=5, max_nexp=None):
+        if obstime is None: obstime = self.obstime
+        if max_nexp is None or max_exps < 0: max_nexp = np.inf
+
+        mags = data['mag']
+        
+        total_time = float(obstime)
+        multiplex = self.instrument.nstar
 
         sort_idx = np.argsort(mags)
         sort_mag = mags[sort_idx]
-        num = len(sort_mag)
+        nstars = len(sort_mag)
 
-        # Minimum exposure for each object
+        # Minimum exposure time to reach SNR threshold for each object
         min_exptime = self.instrument.maglim2exp(sort_mag)
         snr = np.zeros_like(sort_mag)
-        
-        # Number of exposures 
-        nexps = np.arange(len(min_exptime[::nstar]))+1
 
-        # Interested in adding an additional exposure
-        sel = (min_exptime[::nstar] < total_time/(nexps+1) )
-        nexp = (nexps+1)[sel].max()
+        # Number of exposures and time per exposure
+        nexps = np.arange(int(len(sort_mag)/multiplex)) + 1
+        exptime = total_time/nexps
+        next_nexps = nexps+1
+        next_exptime = total_time/(next_nexps)
 
-        imax = nstar*nexp if nstar*nexp < num else num-1
+        # Decide how many exposures to take
+        sel = (min_exptime[::multiplex] <= next_exptime) & (next_nexps <= max_nexp) 
+        nexp = next_nexps[np.where(sel)[0].max()] if sel.sum() else 1
+        idx = nexp * multiplex
+
         eff_exptime = total_time/nexp
-        
-        snr[:imax] = self.instrument.mag2snr(sort_mag[:imax],eff_exptime)
+        snr[:idx] = self.instrument.mag2snr(sort_mag[:idx],eff_exptime)
 
-        print "NExp: %i, ExpTime: %.2f, NStars: %i"%(nexp,eff_exptime,imax)
+        print "SmartTactician -- NExp: %i, ExpTime: %.2f, NStars: %i"%(nexp,eff_exptime,idx)
         
         return snr[np.argsort(sort_idx)]
 
-class MaxStarsTactician(Tactician): 
+class DynamicTimeTactician(Tactician): 
     """Maximize the number of stars with S/N > 5
 
     1) Calculate the amount of time necessary to reach S/N = 5 for each star
@@ -100,8 +106,9 @@ class MaxStarsTactician(Tactician):
 
     This algorithm does not deal with overheads, which will be constant per exposure.
     """
-    def schedule(self, mags, exptime=None, snr_thresh=5):
-        if exptime is None: exptime = self.exptime
+    def schedule(self, data, obstime=None, snr_thresh=5):
+        if obstime is None: obstime = self.obstime
+        mags = data['mag']
 
         nstar = self.instrument.nstar
 
@@ -114,7 +121,7 @@ class MaxStarsTactician(Tactician):
 
         used_time = 0
         for i in range(int(num/nstar)+1):
-            if used_time >= exptime: break
+            if used_time >= obstime: break
 
             imin = i*nstar
             imax = (i+1)*nstar if (i+1)*nstar < num else num-1
@@ -122,14 +129,14 @@ class MaxStarsTactician(Tactician):
             eff_time = min_exptime[imax]
 
             # Last exposure...
-            if exptime < (used_time+eff_time):
-                eff_time = exptime - used_time
+            if obstime < (used_time+eff_time):
+                eff_time = obstime - used_time
 
             snr[imin:imax] = self.instrument.mag2snr(sort_mag[imin:imax],eff_time)
             used_time += eff_time
             nexp = i+1
 
-        print "NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,eff_time,(snr>0).sum())
+        print "MaxStars Tactician -- NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,eff_time,(snr>0).sum())
         return snr[np.argsort(sort_idx)]
 
 

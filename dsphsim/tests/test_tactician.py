@@ -18,25 +18,37 @@ mags = mag_1
 data = np.rec.fromarrays([mag_1,lon,lat],names=['mag','lon','lat'])
 inst = dsphsim.instruments.factory('GMACS')
 obstime = 3600.
+times = np.linspace(500,36000,72)
+times = np.logspace(1,5,25)
 
 basetac = dsphsim.tactician.Tactician(inst)
-maxtac = dsphsim.tactician.MaxStarsTactician(inst)
-smartac = dsphsim.tactician.SmartTactician(inst)
+dyntac = dsphsim.tactician.DynamicTimeTactician(inst)
+equtac = dsphsim.tactician.EqualTimeTactician(inst)
 
-out = []
-times = np.linspace(1000,36000,36)
 x,y,z = [],[],[]
 for obstime in times:
     print "Observation time: %s"%obstime
-    x += [(basetac.schedule(data,obstime)>5).sum()]
-    y += [(maxtac.schedule(data,obstime)>5).sum()]
-    z += [(smartac.schedule(data,obstime)>5).sum()]
+    x += [basetac.schedule(data,obstime)]
+    y += [dyntac.schedule(data,obstime)]
+    z += [equtac.schedule(data,obstime)]
+
 
 plt.figure()
-plt.plot(times,x,label='Single Exposure')
-plt.plot(times,y,label='Variable Exposure')
-plt.plot(times,z,label='Equal Exposure')
-plt.legend(loc='lower right',fontsize=12)
+plt.loglog(times,[(_x>5).sum() for _x in x],label='Single Exposure')
+plt.loglog(times,[(_x>5).sum() for _x in y],label='Dynamic Exposure')
+plt.loglog(times,[(_x>5).sum() for _x in z],label='Equal Exposure')
+plt.legend(loc='upper left',fontsize=12)
 plt.xlabel("Observation Time (s)")
-plt.xlabel("Number of Stars (S/N > 5)")
+plt.ylabel("Number of Stars (S/N > 5)")
+plt.savefig('nstars_vs_exp.png',bbox_inches='tight')
+
+plt.figure()
+plt.loglog(times,[np.nansum(_x) for _x in x],label='Single Exposure')
+plt.loglog(times,[np.nansum(_x) for _x in y],label='Dynamic Exposure')
+plt.loglog(times,[np.nansum(_x) for _x in z],label='Equal Exposure')
+plt.legend(loc='upper left',fontsize=12)
+plt.xlabel("Observation Time (s)")
+plt.ylabel("Sum of S/N")
+plt.savefig('totsnr_vs_exp.png',bbox_inches='tight')
+
 plt.ion()
