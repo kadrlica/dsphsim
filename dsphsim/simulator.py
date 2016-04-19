@@ -91,58 +91,63 @@ class Simulator(object):
                  'SNR','VTRUE','VSTAT','VSYS','VMEAS','VMEASERR','VERR']
         data = [ra[sel],dec[sel],mag_1[sel],mag_2[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
         return np.rec.fromarrays(data,names=names)
+
+    @classmethod
+    def parser(cls):
+        import argparse
+        description = "Simulate the observable properties of a dwarf galaxy."
+        parser = argparse.ArgumentParser(description=description)
+        parser.add_argument('outfile',nargs='?',
+                            help="Optional output file")
+        parser.add_argument('--seed',type=int,default=None,
+                            help="Random seed")
+         
+        group = parser.add_argument_group('Physical')
+        parser.add_argument('--stellar_mass',type=float,default=2000.,
+                            help='Stellar mass for simulated satellite (Msun)')
+        parser.add_argument('--vmean',type=float,default=60.,
+                            help='Mean systemic velocity (km/s)')
+        parser.add_argument('--vdisp',type=float,default=3.3,
+                            help='Velocity dispersion (km/s)')
+         
+        group = parser.add_argument_group('Isochrone')
+        group.add_argument('--isochrone',type=str,default='Bressan2012',
+                            help='Isochrone type.')
+        group.add_argument('--distance_modulus',type=float,default=17.5,
+                            help='Distance modulus.')
+        group.add_argument('--age',type=float,default=13.0,
+                           help='Age of stellar population (Gyr).')
+        group.add_argument('--metallicity',type=float,default=1e-3,
+                           help='Metallicity of stellar population.')
+         
+        group = parser.add_argument_group('Kernel')
+        group.add_argument('--kernel',type=str,default='EllipticalPlummer',
+                           help='Kernel type.')
+        group.add_argument('--ra',type=float,default=54.0,
+                           help='Centroid right acension (deg).')
+        group.add_argument('--dec',type=float,default=-54.0,
+                           help='Centroid declination (deg).')
+        group.add_argument('--extension',type=float,default=0.1,
+                           help='Extension (deg).')
+        group.add_argument('--ellipticity',type=float,default=0.0,
+                           help='Spatial extension (deg).')
+        group.add_argument('--position_angle',type=float,default=0.0,
+                           help='Spatial extension (deg).')
+         
+        group = parser.add_argument_group('Instrument')
+        group.add_argument('--instrument',default='gmacs',choices=['gmacs'],
+                           help='Instrument')
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--exptime',default=3600.,type=float,
+                            help='Exposure time (s)')
+        egroup.add_argument('--maglim',default=None,type=float,
+                            help='Limiting magnitude (S/N = 5)')
+        group.add_argument('--vsys',default=None,type=float,
+                           help='Systematic velocity error (km/s)')
+        return parser
     
 if __name__ == "__main__":
-    import argparse
-    description = "Simulate the observable properties of a dwarf galaxy."
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('outfile',nargs='?',
-                        help="Optional output file")
-    parser.add_argument('--seed',type=int,default=None,
-                        help="Random seed")
-
-    group = parser.add_argument_group('Physical')
-    parser.add_argument('--stellar_mass',type=float,default=2000.,
-                        help='Stellar mass for simulated satellite (Msun)')
-    parser.add_argument('--vmean',type=float,default=60.,
-                        help='Mean systemic velocity (km/s)')
-    parser.add_argument('--vdisp',type=float,default=3.3,
-                        help='Velocity dispersion (km/s)')
-    
-    group = parser.add_argument_group('Isochrone')
-    group.add_argument('--isochrone',type=str,default='Bressan2012',
-                        help='Isochrone type.')
-    group.add_argument('--distance_modulus',type=float,default=17.5,
-                        help='Distance modulus.')
-    group.add_argument('--age',type=float,default=13.0,
-                       help='Age of stellar population (Gyr).')
-    group.add_argument('--metallicity',type=float,default=1e-3,
-                       help='Metallicity of stellar population.')
-    
-    group = parser.add_argument_group('Kernel')
-    group.add_argument('--kernel',type=str,default='EllipticalPlummer',
-                       help='Kernel type.')
-    group.add_argument('--ra',type=float,default=54.0,
-                       help='Centroid right acension (deg).')
-    group.add_argument('--dec',type=float,default=-54.0,
-                       help='Centroid declination (deg).')
-    group.add_argument('--extension',type=float,default=0.1,
-                       help='Extension (deg).')
-    group.add_argument('--ellipticity',type=float,default=0.0,
-                       help='Spatial extension (deg).')
-    group.add_argument('--position_angle',type=float,default=0.0,
-                       help='Spatial extension (deg).')
-
-    group = parser.add_argument_group('Instrument')
-    group.add_argument('--instrument',default='gmacs',choices=['gmacs'],
-                       help='Instrument')
-    egroup = group.add_mutually_exclusive_group()
-    egroup.add_argument('--exptime',default=3600.,type=float,
-                        help='Exposure time (s)')
-    egroup.add_argument('--maglim',default=None,type=float,
-                        help='Limiting magnitude (S/N = 5)')
-    group.add_argument('--vsys',default=None,type=float,
-                       help='Systematic velocity error (km/s)')
+    parser = Simulator.parser()
     args = parser.parse_args()
     kwargs = vars(args)
 
