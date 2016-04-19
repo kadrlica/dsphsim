@@ -153,7 +153,9 @@ class M2FS(Instrument):
         return 10**(a*np.log10(snr) + b)
 
 class GIRAFFE(Instrument):
-    """ GIRAFFE, assuming systematic floor is 0.5km/s, need to be verified later """
+    """GIRAFFE on VLT
+    assume a systematic floor of 0.5km/s (need to verify)
+    """
 
     _filename = 'giraffe_i.dat'
     _defaults = odict([
@@ -166,6 +168,25 @@ class GIRAFFE(Instrument):
     def snr2err(cls, snr):
         # copying from DEIMOS, Need to be changed later
         a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
+
+class AAOmega(Instrument):
+    """AAOmega/2dF on the AAT
+    http://ftp.aao.gov.au/cgi-bin/aaomega_sn.cgi
+    """
+    _filename = 'aaomega_i.dat'
+    _defaults = odict([
+        ('vsys',0.9),
+        ('fov', 2.0),
+        ('nstar',400),
+    ])
+
+    @classmethod
+    def snr2err(cls, snr):
+        # This is for M2FS based on Simon et al. 2015
+        # derived in a similar way as for DEIMOS
+        # ***NEED TO UPDATE THIS FOR AAOMEGA***
+        a,b = -1.04, 0.7745
         return 10**(a*np.log10(snr) + b)
 
 if __name__ == "__main__":
