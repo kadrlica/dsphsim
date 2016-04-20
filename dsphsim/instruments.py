@@ -23,10 +23,10 @@ def factory(name, **kwargs):
     
     namelower = name.lower()
     if namelower not in members.keys():
-        msg = "%s not found in kernels:\n %s"%(name,classes.keys())
+        msg = "%s not found in instruments:\n %s"%(name,classes.keys())
         #logger.error(msg)
         print msg
-        msg = "Unrecognized kernel: %s"%name
+        msg = "Unrecognized instrument: %s"%name
         raise Exception(msg)
  
     return members[namelower](**kwargs)
@@ -114,6 +114,27 @@ class GMACS(Instrument):
         a,b = -1.2, 1.5
         return 10**(a*np.log10(snr) + b)
 
+class IMACS(Instrument):
+    """Inamori-Magellan Areal Camera & Spectrograph (IMACS)
+    http://www.lco.cl/telescopes-information/magellan/instruments/imacs/imacs-specs
+
+    Assume a systematic floor of 1.5 km/s
+    """
+
+    _filename = 'imacs_i.dat'
+    _defaults = odict([
+        ('vsys',1.5),
+        ('fov', 239),
+        ('nstar', 50),
+    ])
+
+    @classmethod
+    def snr2err(cls, snr):
+        """ ***COPIED FROM GMACS***
+        """
+        a,b = -1.2, 1.5
+        return 10**(a*np.log10(snr) + b)
+
 class DEIMOS(Instrument):
     """DEep Imaging Multi-Object Spectrograph (DEIMOS)
     http://www2.keck.hawaii.edu/inst/deimos/specs.html
@@ -121,9 +142,9 @@ class DEIMOS(Instrument):
 
     _filename = 'deimos_i.dat'
     _defaults = odict([
-        ('vsys',2.0),
-        ('fov',0.0232),
-        ('nstar',40),
+        ('vsys',  2.0),
+        ('fov',   83.5),
+        ('nstar', 40),
     ])
 
     @classmethod
@@ -136,13 +157,14 @@ class DEIMOS(Instrument):
 
 class M2FS(Instrument):
     """Michigan/Magellan Fiber System (M2FS)
+    https://www.cfa.harvard.edu/~kenyon/TAC/M2FS_2013B-2.pdf
     """
     _filename = 'm2fs.dat'
     _exptime0 = 7200.
     _defaults = odict([
-        ('vsys',0.9),
-        ('fov', 0.196),
-        ('nstar',256),
+        ('vsys',  0.9),
+        ('fov',   706.9),
+        ('nstar', 256),
     ])
 
     @classmethod
@@ -154,7 +176,8 @@ class M2FS(Instrument):
 
 class GIRAFFE(Instrument):
     """GIRAFFE on VLT
-    assume a systematic floor of 0.5km/s (need to verify)
+
+    Assume a systematic floor of 0.5km/s (need to verify)
     """
 
     _filename = 'giraffe_i.dat'
@@ -177,7 +200,7 @@ class AAOmega(Instrument):
     _filename = 'aaomega_i.dat'
     _defaults = odict([
         ('vsys',0.9),
-        ('fov', 2.0),
+        ('fov', 3600.0),
         ('nstar',400),
     ])
 
