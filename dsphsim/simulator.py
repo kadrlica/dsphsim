@@ -135,8 +135,8 @@ class Simulator(object):
                            help='Spatial extension (deg).')
          
         group = parser.add_argument_group('Instrument')
-        group.add_argument('--instrument',default='gmacs',choices=['gmacs'],
-                           help='Instrument')
+        group.add_argument('--instrument',default='gmacs',
+                           help='Spectroscopic instrument')
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--exptime',default=3600.,type=float,
                             help='Exposure time (s)')
@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
 
     instr= instrumentFactory(args.instrument)
-    if args.vsys is not None: instrument.vsys = args.vsys
+    if args.vsys is not None: instr.vsys = args.vsys
 
     # Run the simulation
     data = Simulator.simulate(dwarf,instr,exptime)
