@@ -1,38 +1,39 @@
 # http://instrumentation.tamu.edu/cgi-bin/gmacs.cgi
 # Full size (7 mirrors)
 # G0V Star
-# High resolution grating
 # i-band magnitude (AB) system
-# Seeing: 0.5 asec
+# High resolution grating
+# R~6000, resolution elements: 1.4 Angstrom
+# Binned Pixel Scale: 0.47 Angstrom/pixel
+# Seeing: 0.7 asec
 # Slit width: 0.7 asec
 # Start Wavelength: 8000
 # Stop Wavelength: 9000
-# Binned Pixel Scale: 1.4
-# S/N measured at 8600A 
-# i-band magnitudes
+# S/N measured at 8600A (continuum)
+# moon phase: half moon (7 day from moon)
 #MAG   36000s 10000s 3600s 1000s 360s
-27.0   1.4    NaN    NaN   NaN   NaN
-26.5   2.25   NaN    NaN   NaN   NaN
-26.0   3.6    NaN    NaN   NaN   NaN 
-25.5   5.75   NaN    NaN   NaN   NaN
-25.0   9.0    NaN    NaN   NaN   NaN
-24.5   14.0   NaN    NaN   NaN   NaN
-24.0   22.5   NaN    NaN   NaN   NaN
-23.5   35     NaN    NaN   NaN   NaN
-23.0   54     NaN    NaN   NaN   NaN
-22.5   82     NaN    NaN   NaN   NaN
-22.0   122    NaN    NaN   NaN   NaN
-21.5   180    NaN    NaN   NaN   NaN
-21.0   255    NaN    NaN   NaN   NaN
-20.5   360    NaN    NaN   NaN   NaN
-20.0   490    NaN    NaN   NaN   NaN
-19.5   650    NaN    NaN   NaN   NaN
-19.0   850    NaN    NaN   NaN   NaN
-18.5   1100   NaN    NaN   NaN   NaN
-18.0   1410   NaN    NaN   NaN   NaN
-17.5   1800   NaN    NaN   NaN   NaN
-17.0   2280   NaN    NaN   NaN   NaN
-16.5   2880   NaN    NaN   NaN   NaN
-16.0   3620   NaN    NaN   NaN   NaN
-15.5   4590   NaN    NaN   NaN   NaN
-15.0   5800   NaN    NaN   NaN   NaN
+27.0   0.6    NaN    NaN   NaN   NaN
+26.5   1.0    NaN    NaN   NaN   NaN
+26.0   1.6    NaN    NaN   NaN   NaN 
+25.5   2.5    NaN    NaN   NaN   NaN
+25.0   3.7    NaN    NaN   NaN   NaN
+24.5   6.0    NaN    NaN   NaN   NaN
+24.0   9.5    NaN    NaN   NaN   NaN
+23.5   15     NaN    NaN   NaN   NaN
+23.0   23     NaN    NaN   NaN   NaN
+22.5   36     NaN    NaN   NaN   NaN
+22.0   55     NaN    NaN   NaN   NaN
+21.5   85     NaN    NaN   NaN   NaN
+21.0   120    NaN    NaN   NaN   NaN
+20.5   180    NaN    NaN   NaN   NaN
+20.0   250    NaN    NaN   NaN   NaN
+19.5   350    NaN    NaN   NaN   NaN
+19.0   450    NaN    NaN   NaN   NaN
+18.5   600    NaN    NaN   NaN   NaN
+18.0   750    NaN    NaN   NaN   NaN
+17.5   1000   NaN    NaN   NaN   NaN
+17.0   1200   NaN    NaN   NaN   NaN
+16.5   1600   NaN    NaN   NaN   NaN
+16.0   2000   NaN    NaN   NaN   NaN
+15.5   2600   NaN    NaN   NaN   NaN
+15.0   3200   NaN    NaN   NaN   NaN
