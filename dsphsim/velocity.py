@@ -59,7 +59,11 @@ def nfw_potential(x):
     Returns:
     phi : Normalized gravitational potential
     """
-    return -np.log(1. + x)/x
+    scalar = np.isscalar(x)
+    x = np.atleast_1d(np.clip(x, 1e-10, None))
+    Phi = -np.log(1. + x)/x
+    if scalar: return np.asscalar(Phi)
+    else: return Phi
 
 def deriv_rhostar(x,y):
     """ 
@@ -86,7 +90,13 @@ def deriv_nfw_potential(x):
     Returns:
     dPhi : Derivative (with respect to x) of gravitational potential
     """
-    return np.log(1.0 + x) / x**2 - 1.0 / (x * (1.0 + x) )
+    scalar = np.isscalar(x)
+    x = np.atleast_1d(np.where(x==0, 1e-30, x))
+    dPhi = np.log(1.0 + x) / x**2 - 1.0 / (x * (1.0 + x) )
+    if scalar:
+        return np.asscalar(dPhi)
+    else:
+        return dPhi
 
 def deriv_rhostar_deriv_Psi(x,y):
     """
@@ -103,8 +113,10 @@ def deriv_rhostar_deriv_Psi(x,y):
     """
     return deriv_rhostar(x,y)/deriv_nfw_potential(x)
 
+# Constants and sampling parameters
 nx=200;nes=200;nts=100;nvs=100
 Gn=6.67e-11*1.99e30*1.e-9 # Newton's constant in units of ...???
+n_grid = 1000;n_final = 5000
 
 class VelocityDistribution(object):
     """
@@ -117,7 +129,7 @@ class VelocityDistribution(object):
         ('vmax',10.0), # Maximum circular velocity (km/s)
     ])
     
-    def __init__(self,args,**kwargs):
+    def __init__(self, *args, **kwargs):
         self._setup(**kwargs)
 
     def _setup(self,**kwargs):
@@ -135,7 +147,7 @@ class VelocityDistribution(object):
         self.Phis = self.vmax**2/0.465**2 
 
 
-    def integrate_energy(energy, interp, method='simps'):
+    def integrate_energy(self, energy, interp, method='simps'):
         err = np.seterr(divide='ignore')
         method = method.lower()
         emin = np.min(energy)
@@ -156,8 +168,8 @@ class VelocityDistribution(object):
         elif method in ['trapz','simps']:
             # Integrate from array
             nstep = 1000
-            x_arr = emin + (0.99*energy-emin)*np.linspace(0,1,nstep)[:,np.newaxis]
-            fa_array = fa(x_arr,energy)
+            x_array = emin + (0.99*energy-emin)*np.linspace(0,1,nstep)[:,np.newaxis]
+            fa_array = fa(x_array,energy)
             if method == 'trapz':
                 int_e = trapz(fa_array,x_array,axis=0)
             if method == 'simps':
@@ -169,7 +181,7 @@ class VelocityDistribution(object):
         np.seterr(**err)
         return np.asarray(int_e)
 
-    def interpolate_logfe(self):
+    def build_interps(self):
 
         # calculate the derivative to the stellar density with respect
         # to the potential xmin, xmax is in units of the dark matter
@@ -178,6 +190,7 @@ class VelocityDistribution(object):
         xmax = 1.e2
         #xstep = np.log(xmax/xmin)/float(nx-1)
         rx = np.exp(np.linspace(np.log(xmin),np.log(xmax),nx))
+        rx = np.append(0,rx)
 
         # Calculate the approximate derivative of the NFW potential for
         # the Eddington formula
@@ -193,44 +206,139 @@ class VelocityDistribution(object):
         drhostardPsi_reverse = drhostardPsi[::-1]
         rx_reverse = rx[::-1]
 
-        # Define the range of energies to evaluate at 
-        emin = np.min(Psi_reverse)
-        emax = np.max(Psi_reverse)
-        estep = np.log(emax/emin)/float(nes-1)
-        #print emin, emax, estep
-
-        energy = emin*np.exp(np.arange(1,nes)*estep)
+        # Interpolation function for derivative as a function of energy
         self.interp_e = loginterp1d(Psi_reverse,drhostardPsi_reverse,
                                     kind='linear',bounds_error=False)
 
-        int_e = self.integrate_energy(energy,self.interp_e,method='simps')
-        log_int_e = np.log(int_e)
+        # Define the range of energies to evaluate at 
+        emin = np.min(Psi_reverse)
+        emax = np.max(Psi_reverse)
+        #estep = np.log(emax/emin)/float(nes-1)
+        #print emin, emax, estep
 
         # Prepend a zero, something Fortran was doing...
-        energy    = np.append([0],energy)
-        int_e     = np.append([0],int_e)
+        #energy = emin*np.exp(np.arange(1,nes)*estep)
+        energy = np.exp(np.linspace(np.log(emin),np.log(emax),nes))
+        energy = np.append(0,energy)
+
+        int_e = self.integrate_energy(energy,self.interp_e,method='simps')
+
+        ## Prepend a zero, something Fortran was doing...
+        #energy    = np.append([0],energy)
+        #int_e     = np.append([0],int_e)
 
         self.interp_inte = interp1d(energy,int_e,kind='linear',bounds_error=False)
+        #self.interp_inte = UnivariateSpline(energy,int_e,k=1,s=0)
 
-        def fb(x, xmax = np.max(Psi_reverse)):
-            return np.where(x >= xmax, 0, self.interp_inte(x))
-         
+        def fb(e, emax=emax):
+            return np.where(e >= emax, 0, self.interp_inte(e))
+
         temp_int = derivative(fb,energy[:-2],1e-4)
         temp_int[0] = 0
          
         logfe_temp = np.array(temp_int)
-        kcut = ~np.isnan(logfe_temp)
+        kcut       = ~np.isnan(logfe_temp)
         energy_cut = self.Phis*energy[kcut]
-        logfe_cut = np.array(logfe_temp)[kcut]
+        logfe_cut  = np.array(logfe_temp)[kcut]
          
-        # Interpolation for log(f) as a function of energy       
+        # Interpolation for log(f) as a function of energy
+        self.energy = energy_cut
         self.interp_logfe = interp1d(energy_cut,logfe_cut,
                                      kind='linear',bounds_error=False)
 
-        return interp_logfe
+        return emin,emax
+
+    def velocity_distribution(self, R_proj):
+        """
+        Calculate the velocity distribution.
+        """
+
+        # Calculate the max radius for this velocity. 
+        # Assume something large small error incurred but come back and refine this 
+        maxr = 10.
+        # Projected radius
+        Rp_in = R_proj
+      
+        # Define the min of the variable t to evaluate at
+        tmin = 1.e-4 
+        tmax = np.sqrt(maxr-Rp_in)
+        #tstep = np.log(tmax/tmin)/float(nts-1)
+      
+        # Define the projected LOS velocity range        
+        velmin = -15.
+        velmax = 15.
+        v_in_arr = np.linspace(velmin,velmax,nvs)
+
+        # Energy range
+        emin = np.min(self.energy)
+        emax = np.max(self.energy)
+
+        # Bounds of integration
+        region = [ 
+            [tmin,tmax],  # t1
+            [emin,emax],  # velocity
+            [0, 2*np.pi], # eta
+        ]
+            
+        @vegas.batchintegrand
+        def dfunc(y):
+            """
+            Probability density function?
+
+            Parameters:
+            y : (array-like) t1,vt,eta
+            
+            Returns:
+            fe : density of f(e)
+            """
+            y = np.atleast_2d(y)
+            t1,vt,eta = y.T
+         
+            rspline = t1**2 + Rp_in
+            Psi_spline = self.interp_psi(rspline)
+            sel = (emin <= vt) & (vt <= (self.Phis*Psi_spline - 0.5*v_in**2))
+         
+            val = self.interp_logfe(vt) * (t1**2+Rp_in)/np.sqrt(2*Rp_in+t1**2)
+            return np.where(sel,val,0) 
+
+        # If star is outside the maximum radius
+        if Rp_in > maxr: 
+            return np.zeros_like(v_in_arr)                    
+
+        # Setup the integrator
+        integrator = vegas.Integrator(region)
+
+        fv_out = []
+        for v_in in v_in_arr:
+            # burn-in
+            integrator(dfunc,nitn=5,neval=n_grid)
+            # evaluate
+            result = integrator(dfunc,nitn=5,neval=n_final)
+            fv_out.append(result.val)
+
+        return v_in_arr, np.asarray(fv_out)
+        
+    def interp_distribution(self, radius, nsteps=10):
+        scalar = np.isscalar(radius)
+        radius = np.atleast_1d(radius)
+        
+        R_proj = np.linspace(radius.min(),radius.max(),nsteps)
+
+        x,y,z = [],[],[]
+        for i,r in enumerate(R_proj):
+            print i,r
+            vel, fv = self.velocity_distribution(r)
+            x.append(r*np.ones_like(vel))
+            y.append(vel)
+            z.append(fv)
+
+        x,y,z = np.array(x),np.array(y),np.array(z)
+        return x,y,z
         
 if __name__ == "__main__":
     import argparse
     description = __doc__
     parser = argparse.ArgumentParser(description=description)
     args = parser.parse_args()
+
+    vel = VelocityDispersion()

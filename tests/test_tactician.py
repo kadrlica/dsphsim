@@ -24,6 +24,7 @@ times = np.logspace(1,5,25)
 basetac = dsphsim.tactician.Tactician(inst)
 dyntac = dsphsim.tactician.DynamicTimeTactician(inst)
 equtac = dsphsim.tactician.EqualTimeTactician(inst)
+numtac = dsphsim.tactician.NumberStarsTactician(inst)
 
 x,y,z = [],[],[]
 for obstime in times:
@@ -31,6 +32,7 @@ for obstime in times:
     x += [basetac.schedule(data,obstime)]
     y += [dyntac.schedule(data,obstime)]
     z += [equtac.schedule(data,obstime)]
+    w += [numtac.schedule(data,nstars=25)]
 
 
 plt.figure()

@@ -140,6 +140,28 @@ class DynamicTimeTactician(Tactician):
         return snr[np.argsort(sort_idx)]
 
 
+class NumberStarsTactician(Tactician): 
+    """
+    """
+    def schedule(self, data, nstars=25, snr_thresh=5):
+        mags = data['mag']
+
+        #nstar = self.instrument.nstar
+
+        sort_idx = np.argsort(mags)
+        sort_mag = mags[sort_idx]
+        num = len(sort_mag)
+
+        min_exptime = self.instrument.maglim2exp(sort_mag)
+        snr = np.zeros_like(sort_mag)
+
+        self.obstime = min_exptime[nstars]
+        snr = self.instrument.mag2snr(sort_mag,self.obstime)
+
+        print "NumberStars Tactician -- "
+        return snr[np.argsort(sort_idx)]
+    
+
 if __name__ == "__main__":
     import argparse
     description = __doc__
