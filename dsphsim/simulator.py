@@ -109,6 +109,12 @@ class Simulator(object):
                             help='Mean systemic velocity (km/s)')
         parser.add_argument('--vdisp',type=float,default=3.3,
                             help='Velocity dispersion (km/s)')
+        parser.add_argument('--vmax',type=float,default=10.0,
+                            help='Maximum circular velocity (km/s)')
+        #parser.add_argument('--rvmax',type=float,default=0.2,
+        #                    help='Radius of max circular velocity (kpc)')
+        parser.add_argument('--rs',type=float,default=0.3,
+                            help='NFW scale radius for DM halo (kpc)')
          
         group = parser.add_argument_group('Isochrone')
         group.add_argument('--isochrone',type=str,default='Bressan2012',
