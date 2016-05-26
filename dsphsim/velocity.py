@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
-Module for deriving velocity distribution
+Module for deriving velocity distribution.
+
+WARNING: This module works in physical space (kpc) *not* angular space (deg).
+
+Louie points us to this reference: 
+https://arxiv.org/abs/1003.4268
+
 """
 __author__ = "Alex Drlica-Wagner"
 
@@ -9,8 +15,9 @@ from collections import OrderedDict as odict
 
 import numpy as np
 from scipy.integrate import romberg, quad, simps, romb, trapz, cumtrapz
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d, SmoothBivariateSpline
 from scipy.misc import derivative
+import matplotlib.tri as mtri
 
 import vegas
 
@@ -22,6 +29,17 @@ def loginterp1d(x,y,**kwargs):
     """
     loginterp = interp1d(x,np.log(y),**kwargs)
     return lambda x: np.exp(loginterp(x))
+
+def triinterp(x,y,z,**kwargs):
+    """
+    Create a linear triangular interpolation using the mlab implementation.
+
+    See matplotlib.tri.LinearTriInterpolator
+
+    Returns masked array.
+    """
+    triang = mtri.Triangulation(x.flat, y.flat)
+    return mtri.LinearTriInterpolator(triang, z.flat)
 
 def plot_values_residuals(x1,y1,x2,y2,**kwargs):
     fig = plt.figure()
@@ -109,7 +127,6 @@ def deriv_rhostar_deriv_Psi(x,y):
     Returns: 
     dPhi : Derivative of the stellar density with respect to
            the gravitational potential
-
     """
     return deriv_rhostar(x,y)/deriv_nfw_potential(x)
 
@@ -124,16 +141,16 @@ class VelocityDistribution(object):
     """
 
     _defaults = odict([
-        ('rpl', 0.04), # Plummer radius (kpc)
-        ('r0',0.2),    # NFW scale radius (kpc)
-        ('vmax',10.0), # Maximum circular velocity (km/s)
+        ('rpl', 0.04),   # Plummer radius (kpc)
+        ('rs',  0.2),    # NFW scale radius (kpc)
+        ('vmax',10.0),   # Maximum circular velocity (km/s)
     ])
     
     def __init__(self, *args, **kwargs):
         self._setup(**kwargs)
 
     def _setup(self,**kwargs):
-        for k,v in kwargs:
+        for k in kwargs:
             if k not in self._defaults:
                 msg = "Keyword argument not found in defaults"
                 raise KeyError(msg)
@@ -146,8 +163,29 @@ class VelocityDistribution(object):
         # Central potential as in 1406.6079 in (km/s)^2 
         self.Phis = self.vmax**2/0.465**2 
 
+        # Default LOS velocity array
+        velmin = -15.
+        velmax = 15.
+        self.velocities = np.linspace(velmin,velmax,nvs)
+
+
+        self.build_interps()
 
     def integrate_energy(self, energy, interp, method='simps'):
+        """
+        Eddington inversion formula. Corresponds to Eqn (5) of:
+        https://arxiv.org/abs/1003.4268
+
+        f(e) ~ \int^0_e d2rho/dpsi2 dpsi/sqrt(psi-e)
+        
+        Parameters:
+        energy : Energies at which to evaluate f(e)
+        interp : Interpolation of integrandd2rho/dpsi2
+        method : Integration technique
+
+        Returns:
+        integral : array as a function of e
+        """
         err = np.seterr(divide='ignore')
         method = method.lower()
         emin = np.min(energy)
@@ -182,7 +220,6 @@ class VelocityDistribution(object):
         return np.asarray(int_e)
 
     def build_interps(self):
-
         # calculate the derivative to the stellar density with respect
         # to the potential xmin, xmax is in units of the dark matter
         # scale radius
@@ -199,18 +236,18 @@ class VelocityDistribution(object):
 
         self.interp_psi = loginterp1d(rx,Psi,bounds_error=False)
 
-        drhostardPsi = -deriv_rhostar_deriv_Psi(rx,self.rpl/self.r0)
+        drhostardPsi = -deriv_rhostar_deriv_Psi(rx,self.rpl/self.rs)
 
         # get the arrays in increasing numerical order 
         Psi_reverse = Psi[::-1]
         drhostardPsi_reverse = drhostardPsi[::-1]
         rx_reverse = rx[::-1]
 
-        # Interpolation function for derivative as a function of energy
+        # Interpolate derivative as a function of potential 
         self.interp_e = loginterp1d(Psi_reverse,drhostardPsi_reverse,
                                     kind='linear',bounds_error=False)
 
-        # Define the range of energies to evaluate at 
+        # Define the range of (binding) energies to evaluate at 
         emin = np.min(Psi_reverse)
         emax = np.max(Psi_reverse)
         #estep = np.log(emax/emin)/float(nes-1)
@@ -241,43 +278,58 @@ class VelocityDistribution(object):
         energy_cut = self.Phis*energy[kcut]
         logfe_cut  = np.array(logfe_temp)[kcut]
          
-        # Interpolation for log(f) as a function of energy
+        # Interpolation for log(f) (?) as a function of energy
         self.energy = energy_cut
         self.interp_logfe = interp1d(energy_cut,logfe_cut,
                                      kind='linear',bounds_error=False)
 
         return emin,emax
 
-    def velocity_distribution(self, R_proj):
+    def velocity_distribution(self, radius, velocities=None):
         """
         Calculate the velocity distribution.
+        
+        Parameters:
+        radius     : Projected radius (kpc)
+        velocities : Array of velocity to evalute f(v)
+        
+        Returns:
+        fv         : The velocity distribution pdf
         """
+
+        if not np.isscalar(radius):
+            msg = "'radius' must be scalar (at least for now)"
+            raise Exception(msg)
+        
+        # Projected radius
+        Rp_in = radius
 
         # Calculate the max radius for this velocity. 
         # Assume something large small error incurred but come back and refine this 
-        maxr = 10.
-        # Projected radius
-        Rp_in = R_proj
+        maxr = 10. # in units of teh scale radius?
+
+        # If star is outside the maximum radius
+        if Rp_in > maxr: 
+            # warning....
+            return np.zeros_like(v_in_arr)
+
+        # Define the projected LOS velocity range
+        if velocities is None: 
+            velocities = self.velocities
       
         # Define the min of the variable t to evaluate at
         tmin = 1.e-4 
         tmax = np.sqrt(maxr-Rp_in)
         #tstep = np.log(tmax/tmin)/float(nts-1)
-      
-        # Define the projected LOS velocity range        
-        velmin = -15.
-        velmax = 15.
-        v_in_arr = np.linspace(velmin,velmax,nvs)
-
+        
         # Energy range
         emin = np.min(self.energy)
         emax = np.max(self.energy)
 
         # Bounds of integration
-        region = [ 
-            [tmin,tmax],  # t1
-            [emin,emax],  # velocity
-            [0, 2*np.pi], # eta
+        region = [[tmin,tmax],  # t1
+                  [emin,emax],  # velocity
+                  [0, 2*np.pi], # eta
         ]
             
         @vegas.batchintegrand
@@ -301,40 +353,105 @@ class VelocityDistribution(object):
             val = self.interp_logfe(vt) * (t1**2+Rp_in)/np.sqrt(2*Rp_in+t1**2)
             return np.where(sel,val,0) 
 
-        # If star is outside the maximum radius
-        if Rp_in > maxr: 
-            return np.zeros_like(v_in_arr)                    
 
         # Setup the integrator
         integrator = vegas.Integrator(region)
 
         fv_out = []
-        for v_in in v_in_arr:
+        for v_in in velocities:
             # burn-in
             integrator(dfunc,nitn=5,neval=n_grid)
             # evaluate
             result = integrator(dfunc,nitn=5,neval=n_final)
             fv_out.append(result.val)
 
-        return v_in_arr, np.asarray(fv_out)
+        return np.asarray(fv_out)
         
-    def interp_distribution(self, radius, nsteps=10):
-        scalar = np.isscalar(radius)
-        radius = np.atleast_1d(radius)
-        
-        R_proj = np.linspace(radius.min(),radius.max(),nsteps)
+    def interp_vdist(self, xproj, nsteps=25):
+        """
+        Interpolate the velocity distribution.
 
-        x,y,z = [],[],[]
-        for i,r in enumerate(R_proj):
-            print i,r
-            vel, fv = self.velocity_distribution(r)
-            x.append(r*np.ones_like(vel))
-            y.append(vel)
+        Parameters:
+        xproj : Projected radius in units of the scale radius
+        nsteps: Number of radii for interpolated velocity distribution
+
+        Returns:
+        None : (sets interp_pdf,interp_cdf,interp_icdf)
+        """
+        xproj = np.atleast_1d(xproj)
+        epsilon = 1e-4
+        xmin = max(np.min(xproj)-epsilon,0)
+        xmax = np.max(xproj)+epsilon
+
+        xsteps = np.linspace(xmin,xmax,nsteps)
+        vsteps = self.velocities
+
+        y,x = np.meshgrid(vsteps,xsteps)
+
+        z = []
+        for i,_x in enumerate(xsteps):
+            print '(%i) x = %.3f'%(i,_x)
+            fv = self.velocity_distribution(_x,vsteps)
             z.append(fv)
 
-        x,y,z = np.array(x),np.array(y),np.array(z)
-        return x,y,z
+        z = np.array(z)
+        w = np.cumsum(z,axis=1)
+        w /= np.max(w,axis=1)[:,np.newaxis]
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.w = w
+
+        self.pdf = z
+        self.npdf = z/np.sum(z,axis=1)[:,np.newaxis]
+        self.cdf = w
         
+        #self.interp_pdf = interp2d(x,y,z,kind='linear')
+        #self.interp_cdf = interp2d(x,y,w,kind='linear')
+        #self.interp_icdf = interp2d(x,w,y,kind='linear')
+
+        #kw = dict(kx=1,ky=1,s=0)
+        #self.interp_pdf  = SmoothBivariateSpline(x.flat,y.flat,z.flat,**kw)
+        #self.interp_cdf  = SmoothBivariateSpline(x.flat,y.flat,w.flat,**kw)
+        #self.interp_icdf = SmoothBivariateSpline(x.flat,w.flat,y.flat,**kw)
+
+        self.interp_pdf  = triinterp(x,y,z)
+        self.interp_cdf  = triinterp(x,y,w)
+        self.interp_icdf = triinterp(x,w,y)
+
+    def sample(self, radius, hold=False):
+        """
+        Draw a random sample of velocities from the inverse CDF.
+
+        Parameters:
+        radius : 2D physical projected radius (kpc)
+        
+        Returns:
+        velocity : Randomly sampled velocities for each star (km/s)
+        """
+        scalar = np.isscalar(radius)
+        xproj = np.atleast_1d(radius)/self.rs
+
+        if not hold: self.interp_vdist(xproj)
+        i = np.random.uniform(size=len(xproj))
+        vel = self.interp_icdf(xproj,i).filled(np.nan)
+        return vel
+
+    def sample_angsep(self, angsep, distance, hold=False):
+        """
+        Draw a random sample of velocities from the inverse CDF.
+
+        Parameters:
+        angsep   : Angular projected radius (deg)
+        distance : Heliocentric distance to dwarf (kpc)
+
+        Returns:
+        velocity : Randomly sampled velocities for each star (km/s)
+        """
+        radius = distance * np.tan(np.radians(angsep))
+        return self.sample(radius,hold)
+
 if __name__ == "__main__":
     import argparse
     description = __doc__

@@ -13,7 +13,7 @@ from ugali.analysis.kernel import kernelFactory
 # This is the place to store all the DM profile information
 class Physical(Model):
     _params = odict([
-        ('vmean', Parameter(60.0) ), # km/s
+        ('vmean', Parameter(0.0) ), # km/s
         ('vdisp', Parameter(3.3) ),  # km/s
         ('vmax' , Parameter(10.0) ), # km/s
         ('rs',    Parameter(0.3) ),  # NFW scale radius (kpc)

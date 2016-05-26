@@ -155,7 +155,7 @@ class NumberStarsTactician(Tactician):
         min_exptime = self.instrument.maglim2exp(sort_mag)
         snr = np.zeros_like(sort_mag)
 
-        self.obstime = min_exptime[nstars]
+        self.obstime = min_exptime[nstars-1]
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
 
         print "NumberStars Tactician -- "

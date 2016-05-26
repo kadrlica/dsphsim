@@ -52,7 +52,7 @@ class Simulator(object):
 
         # Set the second band to 'i' (matches CaT lines)
         dwarf.band_1 = 'g'; dwarf.band_2 = 'i'
-        mag_1,mag_2,ra,dec = dwarf.simulate()        
+        mag_1,mag_2,ra,dec,velocity = dwarf.simulate()        
         snr = instrument.mag2snr(mag_2,exp)
      
         #olderr = np.seterr(all='ignore')
@@ -62,11 +62,13 @@ class Simulator(object):
         nstar = sel.sum()
         mag = mag_1[sel]
         color = (mag_1-mag_2)[sel]
+        vel = velocity[sel]
         snr = snr[sel]
 
         # The true velocity, u, of each star is the sum of the mean velocity and
         # a component from the intrinsic velocity dispersion
-        vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
+        #vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
+        vtrue = dwarf.vmean + vel
 
         # There are two components of the measurement uncertainty on
         # the velocity of each star
@@ -96,49 +98,52 @@ class Simulator(object):
     def parser(cls):
         import argparse
         description = "Simulate the observable properties of a dwarf galaxy."
-        parser = argparse.ArgumentParser(description=description)
+        formatter = argparse.ArgumentDefaultsHelpFormatter
+        parser = argparse.ArgumentParser(description=description,
+                                         formatter_class=formatter)
         parser.add_argument('outfile',nargs='?',
                             help="Optional output file")
         parser.add_argument('--seed',type=int,default=None,
                             help="Random seed")
          
         group = parser.add_argument_group('Physical')
-        parser.add_argument('--stellar_mass',type=float,default=2000.,
+        group.add_argument('--stellar_mass',type=float,default=2000.,
                             help='Stellar mass for simulated satellite (Msun)')
-        parser.add_argument('--vmean',type=float,default=60.,
+        group.add_argument('--vmean',type=float,default=60. ,
                             help='Mean systemic velocity (km/s)')
-        parser.add_argument('--vdisp',type=float,default=3.3,
+        # should be mutually exclusive with vmax and rs
+        group.add_argument('--vdisp',type=float,default=3.3,
                             help='Velocity dispersion (km/s)')
-        parser.add_argument('--vmax',type=float,default=10.0,
+        group.add_argument('--vmax',type=float,default=10.0,
                             help='Maximum circular velocity (km/s)')
-        #parser.add_argument('--rvmax',type=float,default=0.2,
-        #                    help='Radius of max circular velocity (kpc)')
-        parser.add_argument('--rs',type=float,default=0.3,
-                            help='NFW scale radius for DM halo (kpc)')
+        #group.add_argument('--rvmax',type=float,default=0.2,
+        #                   help='Radius of max circular velocity (kpc)')
+        group.add_argument('--rs',type=float,default=0.3,
+                           help='NFW scale radius for DM halo (kpc)')
          
         group = parser.add_argument_group('Isochrone')
         group.add_argument('--isochrone',type=str,default='Bressan2012',
-                            help='Isochrone type.')
+                            help='Isochrone type')
+        group.add_argument('--age',type=float,default=12.0,
+                           help='Age of stellar population (Gyr)')
+        group.add_argument('--metallicity',type=float,default=2e-4,
+                           help='Metallicity of stellar population')
         group.add_argument('--distance_modulus',type=float,default=17.5,
-                            help='Distance modulus.')
-        group.add_argument('--age',type=float,default=13.0,
-                           help='Age of stellar population (Gyr).')
-        group.add_argument('--metallicity',type=float,default=1e-3,
-                           help='Metallicity of stellar population.')
+                            help='Distance modulus')
          
         group = parser.add_argument_group('Kernel')
         group.add_argument('--kernel',type=str,default='EllipticalPlummer',
-                           help='Kernel type.')
+                           help='Kernel type')
         group.add_argument('--ra',type=float,default=54.0,
-                           help='Centroid right acension (deg).')
+                           help='Centroid right acension (deg)')
         group.add_argument('--dec',type=float,default=-54.0,
-                           help='Centroid declination (deg).')
+                           help='Centroid declination (deg)')
         group.add_argument('--extension',type=float,default=0.1,
-                           help='Extension (deg).')
+                           help='Extension (deg)')
         group.add_argument('--ellipticity',type=float,default=0.0,
-                           help='Spatial extension (deg).')
+                           help='Spatial extension (deg)')
         group.add_argument('--position_angle',type=float,default=0.0,
-                           help='Spatial extension (deg).')
+                           help='Spatial extension (deg)')
          
         group = parser.add_argument_group('Instrument')
         group.add_argument('--instrument',default='gmacs',
