@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 import copy
 from collections import OrderedDict as odict
+import numpy as np
+
+from dsphsim.velocity import VelocityDistribution
 
 from ugali.analysis.model import Model, Parameter
 from ugali.analysis.source import Source
@@ -10,8 +13,10 @@ from ugali.analysis.kernel import kernelFactory
 # This is the place to store all the DM profile information
 class Physical(Model):
     _params = odict([
-            ('vmean', Parameter(60.0) ),
-            ('vdisp', Parameter(3.3) ),
+        ('vmean', Parameter(60.0) ), # km/s
+        ('vdisp', Parameter(3.3) ),  # km/s
+        ('vmax' , Parameter(10.0) ), # km/s
+        ('rs',    Parameter(0.3) ),  # NFW scale radius (kpc)
     ])
 
 
@@ -28,15 +33,34 @@ class Dwarf(Source):
     def __init__(self,name=None, **kwargs):
         self.set_model('physical',self.createPhysical())
         super(Dwarf,self).__init__(name,**kwargs)
+        self._create_vdist()
+
+    def _create_vdist(self,):
+        # Physical plummer radius (kpc)
+        rpl = np.tan(np.radians(self.extension)) * self.distance
+        kwargs = dict(rpl=rpl,rs=self.rs,vmax=self.vmax)
+        self.vdist = VelocityDistribution(**kwargs)
 
     def simulate(self):
         stellar_mass = self.richness * self.stellar_mass()
         mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
         lon, lat     = self.kernel.simulate(len(mag_1))
-        return mag_1, mag_2, lon, lat
+
+        # Physical projected radius
+        angsep       = self.kernel.angsep(lon,lat)
+        velocity     = self.vdist.sample(angsep)
+
+        # Don't forget to add the systemic velocity
+        #velocity    += self.vmean
+
+        return mag_1, mag_2, lon, lat, velocity
 
     def parse(self, args):
         pass
+
+    @property
+    def distance(self):
+        return self.isochrone.distance
 
     @classmethod
     def createPhysical(cls,**kwargs):
