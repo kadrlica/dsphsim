@@ -10,6 +10,7 @@ https://arxiv.org/abs/1003.4268
 """
 __author__ = "Alex Drlica-Wagner"
 
+import sys
 import copy
 from collections import OrderedDict as odict
 
@@ -164,8 +165,10 @@ class VelocityDistribution(object):
         self.Phis = self.vmax**2/0.465**2 
 
         # Default LOS velocity array
-        velmin = -15.
-        velmax = 15.
+        #velmin = -15.
+        #velmax = 15.
+        velmin = -1.5 * self.vmax 
+        velmax = 1.5 * self.vmax 
         self.velocities = np.linspace(velmin,velmax,nvs)
 
 
@@ -390,7 +393,7 @@ class VelocityDistribution(object):
 
         z = []
         for i,_x in enumerate(xsteps):
-            print '(%i) x = %.3f'%(i,_x)
+            print >> sys.stderr, '(%i) x = %.3f'%(i,_x)
             fv = self.velocity_distribution(_x,vsteps)
             z.append(fv)
 
