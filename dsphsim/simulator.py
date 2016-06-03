@@ -86,7 +86,7 @@ class Simulator(object):
         vmeaserr = vstaterr
 
         # The error that is commonly used is the sum of the measurement error
-        # and the systematice error estimate in quadrature
+        # and the systematic error added in quadrature
         verr = np.sqrt(vstaterr**2 + vsyserr**2)
      
         names = ['RA','DEC','MAG_%s'%dwarf.band_1.upper(),'MAG_%s'%dwarf.band_2.upper(),
@@ -112,9 +112,10 @@ class Simulator(object):
         group.add_argument('--vmean',type=float,default=60. ,
                             help='Mean systemic velocity (km/s)')
         # should be mutually exclusive with vmax and rs
-        group.add_argument('--vdisp',type=float,default=3.3,
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--vdisp',type=float,default=3.3,
                             help='Velocity dispersion (km/s)')
-        group.add_argument('--vmax',type=float,default=10.0,
+        egroup.add_argument('--vmax',type=float,default=10.0,
                             help='Maximum circular velocity (km/s)')
         #group.add_argument('--rvmax',type=float,default=0.2,
         #                   help='Radius of max circular velocity (kpc)')
@@ -162,11 +163,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = vars(args)
 
-    np.random.seed(args.seed)
+    if args.seed is not None:
+        np.random.seed(args.seed)
 
     exptime = mag2exp(args.maglim) if args.maglim else args.exptime
 
-    dwarf = Dwarf(vmean=args.vmean,vdisp=args.vdisp)
+    dwarf = Dwarf(vmean=args.vmean,vdisp=args.vdisp,vmax=args.vmax,rs=args.rs)
     isochrone=Dwarf.createIsochrone(name=args.isochrone, age=args.age,
                                     metallicity=args.metallicity,
                                     distance_modulus=args.distance_modulus)
@@ -178,7 +180,6 @@ if __name__ == "__main__":
                               lon=args.ra,lat=args.dec)
     dwarf.set_kernel(kernel)
     dwarf.richness = args.stellar_mass/dwarf.isochrone.stellar_mass()
-
 
     instr= instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys

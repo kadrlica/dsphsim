@@ -3,7 +3,8 @@ import copy
 from collections import OrderedDict as odict
 import numpy as np
 
-from dsphsim.velocity import VelocityDistribution
+from dsphsim.velocity import GaussianVelocityDistribution
+from dsphsim.velocity import PhysicalVelocityDistribution
 
 from ugali.analysis.model import Model, Parameter
 from ugali.analysis.source import Source
@@ -13,7 +14,7 @@ from ugali.analysis.kernel import kernelFactory
 # This is the place to store all the DM profile information
 class Physical(Model):
     _params = odict([
-        ('vmean', Parameter(0.0) ), # km/s
+        ('vmean', Parameter(0.0) ),  # km/s
         ('vdisp', Parameter(3.3) ),  # km/s
         ('vmax' , Parameter(10.0) ), # km/s
         ('rs',    Parameter(0.3) ),  # NFW scale radius (kpc)
@@ -35,11 +36,15 @@ class Dwarf(Source):
         super(Dwarf,self).__init__(name,**kwargs)
         self._create_vdist()
 
-    def _create_vdist(self,):
+    def _create_vdist(self):
         # Physical plummer radius (kpc)
-        rpl = np.tan(np.radians(self.extension)) * self.distance
-        kwargs = dict(rpl=rpl,rs=self.rs,vmax=self.vmax)
-        self.vdist = VelocityDistribution(**kwargs)
+        if not np.any(np.isnan([self.vmax,self.rs])):
+            rpl = np.tan(np.radians(self.extension)) * self.distance
+            kwargs = dict(rpl=rpl,rs=self.rs,vmax=self.vmax)
+            self.vdist = PhysicalVelocityDistribution(**kwargs)
+        else:
+            kwargs = dict(vdisp=self.vdisp)
+            self.vdist = GaussianVelocityDistribution(**kwargs)
 
     def simulate(self):
         stellar_mass = self.richness * self.stellar_mass()
@@ -48,7 +53,7 @@ class Dwarf(Source):
 
         # Physical projected radius
         angsep       = self.kernel.angsep(lon,lat)
-        velocity     = self.vdist.sample(angsep)
+        velocity     = self.vdist.sample_angsep(angsep,self.distance)
 
         # Don't forget to add the systemic velocity
         #velocity    += self.vmean

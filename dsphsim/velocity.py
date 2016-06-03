@@ -15,12 +15,19 @@ import copy
 from collections import OrderedDict as odict
 
 import numpy as np
-from scipy.integrate import romberg, quad, simps, romb, trapz, cumtrapz
-from scipy.interpolate import interp1d, interp2d, SmoothBivariateSpline
+import scipy.stats
+from scipy.integrate import romberg, quad, simps, trapz
+from scipy.interpolate import interp1d
+#from scipy.interpolate import interp2d, SmoothBivariateSpline
 from scipy.misc import derivative
 import matplotlib.tri as mtri
 
 import vegas
+
+# Constants and sampling parameters
+nx=200;nes=200;nts=100;nvs=100;nrs=25
+Gn=6.67e-11*1.99e30*1.e-9 # Newton's constant in units of ...???
+n_grid = 1000;n_final = 5000
 
 def loginterp1d(x,y,**kwargs):
     """
@@ -131,26 +138,90 @@ def deriv_rhostar_deriv_Psi(x,y):
     """
     return deriv_rhostar(x,y)/deriv_nfw_potential(x)
 
-# Constants and sampling parameters
-nx=200;nes=200;nts=100;nvs=100
-Gn=6.67e-11*1.99e30*1.e-9 # Newton's constant in units of ...???
-n_grid = 1000;n_final = 5000
-
 class VelocityDistribution(object):
+    """
+    Base class for velocity distribution.
+    """
+    _defaults = odict([
+        ('vel', 1.0),   # Velocity dispersion (km/s)
+    ])
+
+    def __init__(self, *args, **kwargs):
+        self._setup(**kwargs)
+
+    def _setup(self,**kwargs):
+        for k in kwargs:
+            if k not in self._defaults:
+                msg = "Keyword argument not found in defaults"
+                raise KeyError(msg)
+
+        for k,v in self._defaults.items():
+            kwargs.setdefault(k,v)
+        
+        self.__dict__.update(kwargs)
+
+    def _sample(self, radius, hold=False):
+        """
+        Do the sampling (overloaded by subclass)
+        """
+        return self.vel * np.ones_like(radius)
+
+    def sample(self, radius, hold=False):
+        """
+        Draw a random sample of velocities from the inverse CDF.
+
+        Parameters:
+        radius : 2D physical projected radius (kpc)
+        
+        Returns:
+        velocity : Randomly sampled velocities for each star (km/s)
+        """
+        scalar = np.isscalar(radius)
+        vel = self._sample(np.atleast_1d(radius))
+        if scalar: return np.asscalar(vel)
+        return vel
+
+    def sample_angsep(self, angsep, distance, hold=False):
+        """
+        Draw a random sample of velocities from the inverse CDF.
+
+        Parameters:
+        angsep   : Angular projected radius (deg)
+        distance : Heliocentric distance to dwarf (kpc)
+
+        Returns:
+        velocity : Randomly sampled velocities for each star (km/s)
+        """
+        print 'angsep:',np.min(angsep),np.max(angsep)
+        radius = distance * np.tan(np.radians(angsep))
+        print 'radius:',np.min(radius), np.max(radius)
+        return self.sample(radius,hold)
+
+
+class GaussianVelocityDistribution(VelocityDistribution):
+    """
+    Simple Gaussian velocity dispersion Norm(mu=0, sigma=vdisp).
+    """
+    _defaults = odict([
+        ('vdisp', 3.3),   # Velocity dispersion (km/s)
+    ])
+
+    def _sample(self, radius, hold=False):
+        return np.random.normal(0.0,self.vdisp,size=len(radius))
+
+
+class PhysicalVelocityDistribution(VelocityDistribution):
     """
     Class to calculate and apply a dwarf galaxy velocity dispersion.
     """
-
     _defaults = odict([
         ('rpl', 0.04),   # Plummer radius (kpc)
         ('rs',  0.2),    # NFW scale radius (kpc)
         ('vmax',10.0),   # Maximum circular velocity (km/s)
     ])
     
-    def __init__(self, *args, **kwargs):
-        self._setup(**kwargs)
-
     def _setup(self,**kwargs):
+        
         for k in kwargs:
             if k not in self._defaults:
                 msg = "Keyword argument not found in defaults"
@@ -170,7 +241,6 @@ class VelocityDistribution(object):
         velmin = -1.5 * self.vmax 
         velmax = 1.5 * self.vmax 
         self.velocities = np.linspace(velmin,velmax,nvs)
-
 
         self.build_interps()
 
@@ -309,12 +379,12 @@ class VelocityDistribution(object):
 
         # Calculate the max radius for this velocity. 
         # Assume something large small error incurred but come back and refine this 
-        maxr = 10. # in units of teh scale radius?
+        maxr = 10. # in units of the scale radius?
 
         # If star is outside the maximum radius
         if Rp_in > maxr: 
             # warning....
-            return np.zeros_like(v_in_arr)
+            return np.zeros_like(self.velocities)
 
         # Define the projected LOS velocity range
         if velocities is None: 
@@ -370,7 +440,7 @@ class VelocityDistribution(object):
 
         return np.asarray(fv_out)
         
-    def interp_vdist(self, xproj, nsteps=25):
+    def interp_vdist(self, xproj, nsteps=nrs):
         """
         Interpolate the velocity distribution.
 
@@ -385,7 +455,7 @@ class VelocityDistribution(object):
         epsilon = 1e-4
         xmin = max(np.min(xproj)-epsilon,0)
         xmax = np.max(xproj)+epsilon
-
+        print 'xmin,xmax:',xmin, xmax
         xsteps = np.linspace(xmin,xmax,nsteps)
         vsteps = self.velocities
 
@@ -398,17 +468,20 @@ class VelocityDistribution(object):
             z.append(fv)
 
         z = np.array(z)
+
+        # The nan_to_num is for 0/0 division (not too safe)
+        u = np.nan_to_num(z/np.sum(z,axis=1)[:,np.newaxis])
         w = np.cumsum(z,axis=1)
-        w /= np.max(w,axis=1)[:,np.newaxis]
+        w = np.nan_to_num(w/np.max(w,axis=1)[:,np.newaxis])
 
         self.x = x
         self.y = y
         self.z = z
         self.w = w
 
-        self.pdf = z
-        self.npdf = z/np.sum(z,axis=1)[:,np.newaxis]
-        self.cdf = w
+        self.pdf  = z  # PDF
+        self.npdf = u  # Normalized PDF
+        self.cdf  = w  # Normalized CDF
         
         #self.interp_pdf = interp2d(x,y,z,kind='linear')
         #self.interp_cdf = interp2d(x,y,w,kind='linear')
@@ -423,38 +496,17 @@ class VelocityDistribution(object):
         self.interp_cdf  = triinterp(x,y,w)
         self.interp_icdf = triinterp(x,w,y)
 
-    def sample(self, radius, hold=False):
+    def _sample(self, radius, hold=False):
         """
-        Draw a random sample of velocities from the inverse CDF.
-
-        Parameters:
-        radius : 2D physical projected radius (kpc)
-        
-        Returns:
-        velocity : Randomly sampled velocities for each star (km/s)
+        Sample from the inverse CDF.
         """
-        scalar = np.isscalar(radius)
         xproj = np.atleast_1d(radius)/self.rs
-
+        print 'xproj:',np.min(xproj),np.max(xproj)
         if not hold: self.interp_vdist(xproj)
         i = np.random.uniform(size=len(xproj))
         vel = self.interp_icdf(xproj,i).filled(np.nan)
         return vel
-
-    def sample_angsep(self, angsep, distance, hold=False):
-        """
-        Draw a random sample of velocities from the inverse CDF.
-
-        Parameters:
-        angsep   : Angular projected radius (deg)
-        distance : Heliocentric distance to dwarf (kpc)
-
-        Returns:
-        velocity : Randomly sampled velocities for each star (km/s)
-        """
-        radius = distance * np.tan(np.radians(angsep))
-        return self.sample(radius,hold)
-
+    
 if __name__ == "__main__":
     import argparse
     description = __doc__
