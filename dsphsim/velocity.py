@@ -148,6 +148,7 @@ class VelocityDistribution(object):
 
     def __init__(self, *args, **kwargs):
         self._setup(**kwargs)
+        print 'self.rpl:',self.rpl
 
     def _setup(self,**kwargs):
         for k in kwargs:
@@ -192,9 +193,7 @@ class VelocityDistribution(object):
         Returns:
         velocity : Randomly sampled velocities for each star (km/s)
         """
-        print 'angsep:',np.min(angsep),np.max(angsep)
         radius = distance * np.tan(np.radians(angsep))
-        print 'radius:',np.min(radius), np.max(radius)
         return self.sample(radius,hold)
 
 
@@ -455,7 +454,6 @@ class PhysicalVelocityDistribution(VelocityDistribution):
         epsilon = 1e-4
         xmin = max(np.min(xproj)-epsilon,0)
         xmax = np.max(xproj)+epsilon
-        print 'xmin,xmax:',xmin, xmax
         xsteps = np.linspace(xmin,xmax,nsteps)
         vsteps = self.velocities
 
@@ -482,7 +480,11 @@ class PhysicalVelocityDistribution(VelocityDistribution):
         self.pdf  = z  # PDF
         self.npdf = u  # Normalized PDF
         self.cdf  = w  # Normalized CDF
-        
+
+        # Velocity and velocity function
+        self.v  = y
+        self.fv = z  
+
         #self.interp_pdf = interp2d(x,y,z,kind='linear')
         #self.interp_cdf = interp2d(x,y,w,kind='linear')
         #self.interp_icdf = interp2d(x,w,y,kind='linear')
@@ -501,7 +503,6 @@ class PhysicalVelocityDistribution(VelocityDistribution):
         Sample from the inverse CDF.
         """
         xproj = np.atleast_1d(radius)/self.rs
-        print 'xproj:',np.min(xproj),np.max(xproj)
         if not hold: self.interp_vdist(xproj)
         i = np.random.uniform(size=len(xproj))
         vel = self.interp_icdf(xproj,i).filled(np.nan)

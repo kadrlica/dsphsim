@@ -54,17 +54,25 @@ class Simulator(object):
         dwarf.band_1 = 'g'; dwarf.band_2 = 'i'
         mag_1,mag_2,ra,dec,velocity = dwarf.simulate()        
         snr = instrument.mag2snr(mag_2,exp)
-     
+
         #olderr = np.seterr(all='ignore')
+        # Allow user to change these thresholds?
         sel = (mag_1 > 16) & (snr > 5)
-        #np.seterr(**olderr)
-       
         nstar = sel.sum()
-        mag = mag_1[sel]
-        color = (mag_1-mag_2)[sel]
+        #np.seterr(**olderr)
+
+        ra = ra[sel]
+        dec = dec[sel]
+        mag_1 = mag_1[sel]
+        mag_2 = mag_2[sel]
+        sep = dwarf.kernel.angsep(ra,dec)
         vel = velocity[sel]
         snr = snr[sel]
 
+        rproj = dwarf.distance * np.tan(np.radians(sep))
+        #mag = mag_1
+        #color = (mag_1-mag_2)
+        
         # The true velocity, u, of each star is the sum of the mean velocity and
         # a component from the intrinsic velocity dispersion
         #vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
@@ -73,7 +81,7 @@ class Simulator(object):
         # There are two components of the measurement uncertainty on
         # the velocity of each star
         vstaterr = instrument.snr2err(snr)
-        vsyserr = instrument.vsys
+        vsyserr = instrument.vsys * np.ones_like(snr)
 
         # The measured velocity is the true velocity plus a component from the
         # instrumental measurement error
@@ -88,10 +96,19 @@ class Simulator(object):
         # The error that is commonly used is the sum of the measurement error
         # and the systematic error added in quadrature
         verr = np.sqrt(vstaterr**2 + vsyserr**2)
-     
-        names = ['RA','DEC','MAG_%s'%dwarf.band_1.upper(),'MAG_%s'%dwarf.band_2.upper(),
-                 'SNR','VTRUE','VSTAT','VSYS','VMEAS','VMEASERR','VERR']
-        data = [ra[sel],dec[sel],mag_1[sel],mag_2[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
+
+        # Do we also want to save vsyserr as VSYSERR?
+        names = ['RA','DEC',
+                 'MAG_%s'%dwarf.band_1.upper(),'MAG_%s'%dwarf.band_2.upper(),
+                 'ANGSEP','RPROJ','SNR',
+                 'VTRUE','VSTAT','VSYS',
+                 'VMEAS','VMEASERR','VSYSERR','VERR']
+        #data = [ra[sel],dec[sel],mag_1[sel],mag_2[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
+        data = [ra, dec,
+                mag_1, mag_2,
+                sep, rproj, snr,
+                vtrue, vstat, vsys,
+                vmeas, vmeaserr, vsyserr, verr]
         return np.rec.fromarrays(data,names=names)
 
     @classmethod
@@ -189,8 +206,11 @@ if __name__ == "__main__":
 
     # Output
     if args.outfile:
-        out = open(args.outfile,'w')
+        print args.outfile
+        if os.path.exists(args.outfile): os.remove(args.outfile)
+        out = open(args.outfile,'w',1)
     else:
         out = sys.stdout
     out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
     np.savetxt(out,data,fmt='%-9.5f')
+    out.flush()

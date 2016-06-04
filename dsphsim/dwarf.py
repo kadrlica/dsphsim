@@ -34,24 +34,29 @@ class Dwarf(Source):
     def __init__(self,name=None, **kwargs):
         self.set_model('physical',self.createPhysical())
         super(Dwarf,self).__init__(name,**kwargs)
-        self._create_vdist()
 
     def _create_vdist(self):
         # Physical plummer radius (kpc)
         if not np.any(np.isnan([self.vmax,self.rs])):
-            rpl = np.tan(np.radians(self.extension)) * self.distance
+            rh = self.extension * np.sqrt(1-self.ellipticity)
+            rpl = self.distance * np.tan(np.radians(rh)) 
+            print 'distance:',self.distance
+            print 'extension:',self.extension
+            print 'rpl:',rpl
             kwargs = dict(rpl=rpl,rs=self.rs,vmax=self.vmax)
             self.vdist = PhysicalVelocityDistribution(**kwargs)
         else:
             kwargs = dict(vdisp=self.vdisp)
             self.vdist = GaussianVelocityDistribution(**kwargs)
 
-    def simulate(self):
+    def simulate(self,hold=False):
         stellar_mass = self.richness * self.stellar_mass()
         mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
         lon, lat     = self.kernel.simulate(len(mag_1))
 
         # Physical projected radius
+        #if not hasattr(self,'vdist'): self._create_vdist()
+        if not hold: self._create_vdist()
         angsep       = self.kernel.angsep(lon,lat)
         velocity     = self.vdist.sample_angsep(angsep,self.distance)
 
@@ -72,7 +77,6 @@ class Dwarf(Source):
         for k,v in copy.deepcopy(cls._defaults['physical']).items():
             kwargs.setdefault(k,v)
         return Physical(**kwargs)
-
 
 if __name__ == "__main__":
     import argparse
