@@ -16,14 +16,15 @@ from ugali.utils.projector import angsep
 
 np.random.seed(0)
 
-kwargs = dict(distance_modulus=17.5,extension=0.1,rs=1.0,richness=1e4)
+kwargs = dict(distance_modulus=17.5,extension=0.1,rs=1.0,richness=1e4,
+)
 kwargs.update(vmax=20)
 
 dwarf = dsphsim.dwarf.Dwarf(**kwargs)
-vdist = dwarf.vdist
+vdist = dwarf.kinematics
 mag_1, mag_2, lon, lat, vel = dwarf.simulate()
 angsep = dwarf.kernel.angsep(lon,lat)
-velocities = dwarf.vdist.velocities
+velocities = dwarf.kinematics.velocities
 print "Simulated %s stars"%len(vel)
 
 # Angular separation (deg)
@@ -42,9 +43,9 @@ junk,ii = np.meshgrid(x,i)
 #cdf = dwarf.vdist.interp_cdf(r,v)
 #icdf = dwarf.vdist.interp_icdf(r,i)
 
-pdf = dwarf.vdist.interp_pdf(xx,vv)
-cdf = dwarf.vdist.interp_cdf(xx,vv)
-icdf = dwarf.vdist.interp_icdf(xx,ii)
+pdf = dwarf.kinematics.interp_pdf(xx,vv)
+cdf = dwarf.kinematics.interp_cdf(xx,vv)
+icdf = dwarf.kinematics.interp_icdf(xx,ii)
 
 plt.figure()
 plt.pcolormesh(a,v,pdf)
