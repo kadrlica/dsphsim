@@ -56,6 +56,11 @@ def mcmc(vel, vel_err, **kwargs):
     nburn    = kwargs.get('nburn',50)    # "burn-in" period to let chains stabilize
     nsteps   = kwargs.get('nsteps',5000) # number of MCMC steps to take
 
+    if not np.all(np.isfinite([vel,vel_err])):
+        print "WARNING: Non-finite value found in data"
+        sel = np.isfinite(vel) & np.isfinite(vel_err)
+        vel,vel_err = vel[sel], vel_err[sel]
+
     #np.random.seed()
     m = np.random.normal(np.mean(vel), scale=1, size=(nwalkers))
     s = np.random.normal(np.std(vel), scale=1, size=(nwalkers))
@@ -98,6 +103,7 @@ if __name__ == "__main__":
         velerr = np.zeros_like(vel)
     else:
         velerr = data[args.velerr]
+
     samples = mcmc(vel,velerr,**kwargs)
 
     if args.plot:
@@ -111,5 +117,5 @@ if __name__ == "__main__":
     print '%-05s : %.2f'%('std',std)
 
     for name in ['mu','sigma']:
-        peak,[low,high] =samples.peak_interval(name)
+        peak,[low,high] = samples.peak_interval(name)
         print "%-05s : %.2f [%.2f,%.2f]"%(name,peak,low,high)
