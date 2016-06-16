@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Module for deriving velocity distribution.
+Module for deriving kinematic velocity distributions.
 
-WARNING: This module works in physical space (kpc) *not* angular space (deg).
+WARNING: This module works in physical space (kpc) *not* angular space.
 
 Louie points us to this reference: 
 https://arxiv.org/abs/1003.4268
@@ -23,6 +23,8 @@ from scipy.misc import derivative
 import matplotlib.tri as mtri
 
 import vegas
+
+from ugali.analysis.model import Model,Parameter
 
 # Constants and sampling parameters
 nx=200;nes=200;nts=100;nvs=100;nrs=25
@@ -138,34 +140,41 @@ def deriv_rhostar_deriv_Psi(x,y):
     """
     return deriv_rhostar(x,y)/deriv_nfw_potential(x)
 
-class VelocityDistribution(object):
+#class VelocityDistribution(object):
+class VelocityDistribution(Model):
     """
     Base class for velocity distribution.
     """
-    _defaults = odict([
-        ('vel', 1.0),   # Velocity dispersion (km/s)
+    #_defaults = odict([
+    #    ('vmean', 0.0),  # km/s
+    #    ('vdisp', 1.0),    # Velocity dispersion (km/s)
+    #])
+
+    ### def __init__(self, *args, **kwargs):
+    ###     self._setup(**kwargs)
+
+    ### def _setup(self,**kwargs):
+    ###     for k in kwargs:
+    ###         if k not in self._defaults:
+    ###             msg = "Keyword argument not found in defaults"
+    ###             raise KeyError(msg)
+    ###  
+    ###     for k,v in self._defaults.items():
+    ###         kwargs.setdefault(k,v)
+    ###     
+    ###     self.__dict__.update(kwargs)
+
+    _params = odict([
+        ('vmean', Parameter(0.0) ),  # km/s
+        ('vdisp', Parameter(1.0) ),    # Velocity dispersion (km/s)
     ])
 
-    def __init__(self, *args, **kwargs):
-        self._setup(**kwargs)
-        print 'self.rpl:',self.rpl
-
-    def _setup(self,**kwargs):
-        for k in kwargs:
-            if k not in self._defaults:
-                msg = "Keyword argument not found in defaults"
-                raise KeyError(msg)
-
-        for k,v in self._defaults.items():
-            kwargs.setdefault(k,v)
-        
-        self.__dict__.update(kwargs)
 
     def _sample(self, radius, hold=False):
         """
         Do the sampling (overloaded by subclass)
         """
-        return self.vel * np.ones_like(radius)
+        return self.vdisp * np.ones_like(radius)
 
     def sample(self, radius, hold=False):
         """
@@ -179,6 +188,8 @@ class VelocityDistribution(object):
         """
         scalar = np.isscalar(radius)
         vel = self._sample(np.atleast_1d(radius))
+        # Don't forget the mean velocity
+        vel += self.vmean
         if scalar: return np.asscalar(vel)
         return vel
 
@@ -197,51 +208,62 @@ class VelocityDistribution(object):
         return self.sample(radius,hold)
 
 
-class GaussianVelocityDistribution(VelocityDistribution):
+class GaussianVelocity(VelocityDistribution):
     """
     Simple Gaussian velocity dispersion Norm(mu=0, sigma=vdisp).
     """
-    _defaults = odict([
-        ('vdisp', 3.3),   # Velocity dispersion (km/s)
+    _params = odict([
+        ('vmean', Parameter(0.0) ),  # km/s
+        ('vdisp', Parameter(3.3) ),  # Velocity dispersion (km/s)
     ])
 
     def _sample(self, radius, hold=False):
         return np.random.normal(0.0,self.vdisp,size=len(radius))
 
 
-class PhysicalVelocityDistribution(VelocityDistribution):
+class PhysicalVelocity(VelocityDistribution):
     """
     Class to calculate and apply a dwarf galaxy velocity dispersion.
     """
-    _defaults = odict([
-        ('rpl', 0.04),   # Plummer radius (kpc)
-        ('rs',  0.2),    # NFW scale radius (kpc)
-        ('vmax',10.0),   # Maximum circular velocity (km/s)
+
+    _params = odict([
+        ('vmean', Parameter(0.0) ),   # Systemic velocity (km/s)
+        ('vmax',  Parameter(10.0) ),  # Maximum circular velocity (km/s)
+        ('rvmax', Parameter(0.4) ),   # Radius of maximum circular velocity (kpc)
+        ('rpl',   Parameter(0.04) ),  # Projected Plummer radius (kpc)
     ])
     
-    def _setup(self,**kwargs):
-        
-        for k in kwargs:
-            if k not in self._defaults:
-                msg = "Keyword argument not found in defaults"
-                raise KeyError(msg)
+    def _cache(self, name=None):
+        ### # Central potential as in 1406.6079 in (km/s)^2 
+        ### self.Phis = self.vmax**2/0.465**2 
 
-        for k,v in self._defaults.items():
-            kwargs.setdefault(k,v)
-        
-        self.__dict__.update(kwargs)
-
-        # Central potential as in 1406.6079 in (km/s)^2 
-        self.Phis = self.vmax**2/0.465**2 
-
-        # Default LOS velocity array
-        #velmin = -15.
-        #velmax = 15.
         velmin = -1.5 * self.vmax 
         velmax = 1.5 * self.vmax 
         self.velocities = np.linspace(velmin,velmax,nvs)
 
         self.build_interps()
+
+    @property
+    def Phis(self):
+        # Central potential as in 1406.6079 in (km/s)^2 
+        return self.vmax**2/0.465**2 
+
+    @property
+    def rs(self):
+        """
+        NFW scale radius (kpc) from Eqn 9 of:
+        http://arxiv.org/abs/0805.4416
+        """
+        return self.rvmax/2.163
+
+    @property
+    def rhos(self):
+        """
+        NFW scale density (Msun/kpc^3) from Eqn 10 of:
+        http://arxiv.org/abs/0805.4416
+        """
+        G = 4.302e-6 # kpc Msun^-1 (km/s)^2
+        return 4.625/(4*np.pi*G) * (self.vmax/self.rs)**2
 
     def integrate_energy(self, energy, interp, method='simps'):
         """
@@ -507,6 +529,30 @@ class PhysicalVelocityDistribution(VelocityDistribution):
         i = np.random.uniform(size=len(xproj))
         vel = self.interp_icdf(xproj,i).filled(np.nan)
         return vel
+
+Gaussian = GaussianVelocity
+Physical = PhysicalVelocity
+
+def velocityFactory(name, **kwargs):
+    """
+    Factory for creating spatial kernels. Arguments
+    are passed directly to the constructor of the chosen
+    kernel.
+    """
+    import inspect
+    import logging
+    fn = lambda member: inspect.isclass(member) and member.__module__==__name__
+    classes = odict(inspect.getmembers(sys.modules[__name__], fn))
+ 
+    if name not in classes.keys():
+        msg = "%s not found in classes:\n %s"%(name,classes.keys())
+        logging.error(msg)
+        msg = "Unrecognized kernel: %s"%name
+        raise Exception(msg)
+
+    # Allow the user to pass un-used arguments...
+    kw = {k:v for k,v in kwargs.items() if k in classes[name]._params.keys()}
+    return classes[name](**kw)
     
 if __name__ == "__main__":
     import argparse
