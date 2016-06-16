@@ -72,11 +72,13 @@ class Simulator(object):
         rproj = dwarf.distance * np.tan(np.radians(sep))
         #mag = mag_1
         #color = (mag_1-mag_2)
-        
+
         # The true velocity, u, of each star is the sum of the mean velocity and
         # a component from the intrinsic velocity dispersion
         #vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
-        vtrue = dwarf.vmean + vel
+        #vtrue = dwarf.vmean + vel
+        # ADW: The mean velocity is applied in the velocity sampling
+        vtrue = vel
 
         # There are two components of the measurement uncertainty on
         # the velocity of each star
@@ -126,7 +128,11 @@ class Simulator(object):
         group = parser.add_argument_group('Physical')
         group.add_argument('--stellar_mass',type=float,default=2000.,
                             help='Stellar mass for simulated satellite (Msun)')
-        group.add_argument('--vmean',type=float,default=60. ,
+
+        group = parser.add_argument_group('Kinematic')
+        group.add_argument('--kinematics',type=str,default='Gaussian',
+                           help='Kinematic distribution')
+        group.add_argument('--vmean',type=float,default=60.,
                             help='Mean systemic velocity (km/s)')
         # should be mutually exclusive with vmax and rs
         egroup = group.add_mutually_exclusive_group()
@@ -134,9 +140,10 @@ class Simulator(object):
                             help='Velocity dispersion (km/s)')
         egroup.add_argument('--vmax',type=float,default=10.0,
                             help='Maximum circular velocity (km/s)')
-        #group.add_argument('--rvmax',type=float,default=0.2,
-        #                   help='Radius of max circular velocity (kpc)')
-        group.add_argument('--rs',type=float,default=0.3,
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--rvmax',type=float,default=None,
+                           help='Radius of max circular velocity (kpc)')
+        egroup.add_argument('--rs',type=float,default=None,
                            help='NFW scale radius for DM halo (kpc)')
          
         group = parser.add_argument_group('Isochrone')
@@ -185,7 +192,8 @@ if __name__ == "__main__":
 
     exptime = mag2exp(args.maglim) if args.maglim else args.exptime
 
-    dwarf = Dwarf(vmean=args.vmean,vdisp=args.vdisp,vmax=args.vmax,rs=args.rs)
+
+    dwarf = Dwarf()
     isochrone=Dwarf.createIsochrone(name=args.isochrone, age=args.age,
                                     metallicity=args.metallicity,
                                     distance_modulus=args.distance_modulus)
@@ -198,6 +206,15 @@ if __name__ == "__main__":
     dwarf.set_kernel(kernel)
     dwarf.richness = args.stellar_mass/dwarf.isochrone.stellar_mass()
 
+    # Set the kinematic properties
+    if args.rs is not None: args.rvmax = 2.163*args.rs
+    kinematics=Dwarf.createKinematics(name=args.kinematics, 
+                                      vdisp=args.vdisp, vmean=args.vmean,
+                                      vmax=args.vmax, rvmax=args.rvmax)
+    
+    dwarf.set_kinematics(kinematics)
+    #print dwarf
+
     instr= instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys
 
@@ -206,7 +223,6 @@ if __name__ == "__main__":
 
     # Output
     if args.outfile:
-        print args.outfile
         if os.path.exists(args.outfile): os.remove(args.outfile)
         out = open(args.outfile,'w',1)
     else:
