@@ -2,6 +2,7 @@
 """
 Calculate the velocity dispersion from output data.
 """
+
 import os
 import numpy as np
 import pylab as plt

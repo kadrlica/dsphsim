@@ -8,7 +8,6 @@ Louie points us to this reference:
 https://arxiv.org/abs/1003.4268
 
 """
-__author__ = "Alex Drlica-Wagner"
 
 import sys
 import copy
@@ -35,7 +34,7 @@ n_grid = 1000; n_final = 5000
 
 def loginterp1d(x,y,**kwargs):
     """
-    Interpolate a 1-D function applying a logarithmic transform to y.
+    Interpolate a 1-D function applying a logarithmic transform to y-values.
 
     See scipy.interpolate.interp1d for more details.
     """
@@ -48,10 +47,12 @@ def triinterp(x,y,z,**kwargs):
     """
     Create a linear triangular interpolation using the mlab implementation.
 
-    See matplotlib.tri.LinearTriInterpolator
+    See `matplotlib.tri.LinearTriInterpolator`
 
-    Returns masked array.
+    Returns a numpy masked array.
     """
+    import warnings
+    warnings.simplefilter(action="ignore", category=FutureWarning)
     triang = mtri.Triangulation(x.flat, y.flat)
     return mtri.LinearTriInterpolator(triang, z.flat)
 
