@@ -135,13 +135,15 @@ class Simulator(object):
         # should be mutually exclusive with vmax and rs
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--vdisp',type=float,default=3.3,
-                            help='Velocity dispersion (km/s)')
+                            help='Gaussian velocity dispersion (km/s)')
         egroup.add_argument('--vmax',type=float,default=10.0,
                             help='Maximum circular velocity (km/s)')
+        egroup.add_argument('--rhos',type=float,default=None,
+                            help='Maximum circular velocity (Msun/pc^3)')
         egroup = group.add_mutually_exclusive_group()
-        egroup.add_argument('--rvmax',type=float,default=None,
+        egroup.add_argument('--rvmax',type=float,default=0.4,
                            help='Radius of max circular velocity (kpc)')
-        # ADW: it would be nice to remove this
+        # ADW: it would be nice to remove this or
         egroup.add_argument('--rs',type=float,default=None,
                            help='NFW scale radius for DM halo (kpc)')
          
@@ -207,6 +209,7 @@ if __name__ == "__main__":
 
     # Set the kinematic properties
     if args.rs is not None: args.rvmax = 2.163*args.rs
+    if args.rhos is not None: raise Exception('Not implemented')
     kinematics=Dwarf.createKinematics(name=args.kinematics, 
                                       vdisp=args.vdisp, vmean=args.vmean,
                                       vmax=args.vmax, rvmax=args.rvmax)
