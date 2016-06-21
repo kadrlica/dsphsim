@@ -141,6 +141,9 @@ class DynamicTimeTactician(Tactician):
 
 class NumberStarsTactician(Tactician): 
     """
+    Calculate exposure time to reach a certain number of stars.
+
+    WARNING: May not deal with saturated stars as expected.
     """
     def schedule(self, data, nstars=25, snr_thresh=5):
         mags = data['mag']
@@ -149,7 +152,7 @@ class NumberStarsTactician(Tactician):
         sort_mag = mags[sort_idx]
 
         min_exptime = self.instrument.maglim2exp(sort_mag)
-        self.obstime = min_exptime[nstars]
+        self.obstime = min_exptime[nstars-1]
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
         nexp = 1
 

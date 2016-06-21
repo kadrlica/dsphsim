@@ -13,7 +13,7 @@ from scipy.interpolate import interp1d
 from scipy.optimize import brentq
 
 # Minimum and maximum magnitudes for instruments
-MAGMIN = 16
+MAGMIN = 15
 MAGMAX = 27
 
 def factory(name, **kwargs):
