@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+Interface to instrument characteristics.
+"""
+
 import os,sys
 from collections import OrderedDict as odict
 import inspect

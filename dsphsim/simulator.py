@@ -2,9 +2,6 @@
 """
 Simple tool to simulate stellar populations.
 """
-__author__ = "Alex Drlica-Wagner"
-__email__ = "kadrlica@fnal.gov"
-__version__ = "0.1.0"
 
 import os,sys
 import numpy as np
@@ -13,7 +10,6 @@ import scipy.stats as stats
 
 from dsphsim.dwarf import Dwarf
 from dsphsim.instruments import factory as instrumentFactory
-
 
 def randerr(size=1,func='normal',**kwargs):
     """ Return a sample from a random variate. """
@@ -57,7 +53,7 @@ class Simulator(object):
 
         #olderr = np.seterr(all='ignore')
         # Allow user to change these thresholds?
-        sel = (mag_1 > 16) & (snr > 5)
+        sel = (mag_1 > 16) & (np.nan_to_num(snr) > 5)
         nstar = sel.sum()
         #np.seterr(**olderr)
 

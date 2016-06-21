@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 """
-Choose how to target a field
+Choose how to target a field.
 """
-__author__ = "Alex Drlica-Wagner"
 
 import numpy as np
 

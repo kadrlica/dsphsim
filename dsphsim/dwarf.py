@@ -1,7 +1,12 @@
 #!/usr/bin/env python
+"""
+Encapsulate the properties of a dwarf galaxy.
+"""
+
 import copy
 from collections import OrderedDict as odict
 import numpy as np
+import logging
 
 from dsphsim.velocity import GaussianVelocity
 from dsphsim.velocity import PhysicalVelocity
@@ -14,30 +19,16 @@ class Dwarf(Source):
     """ Class containing the physical characteristics of the dwarf
     galaxy. This can be used to sample the `true` physical
     properties of the stars in a dwarf galaxy. """
+
     _defaults = odict(
         Source._defaults.items() + 
         [
             ('kinematics' , dict(name='GaussianVelocity')),
-            #('kinematics' , dict(name='PhysicalVelocity')),
         ])
     
     def __init__(self,name=None, **kwargs):
         self.set_model('kinematics',self.createKinematics())
         super(Dwarf,self).__init__(name,**kwargs)
-
-    ### def _create_vdist(self):
-    ###     if not np.any(np.isnan([self.vmax,self.rs])):
-    ###         # Physical plummer radius (kpc)
-    ###         rh = self.extension * np.sqrt(1-self.ellipticity)
-    ###         rpl = self.distance * np.tan(np.radians(rh)) 
-    ###         print 'distance:',self.distance
-    ###         print 'extension:',self.extension
-    ###         print 'rpl:',rpl
-    ###         kwargs = dict(rpl=rpl,rs=self.rs,vmax=self.vmax)
-    ###         self.vdist = PhysicalVelocity(**kwargs)
-    ###     else:
-    ###         kwargs = dict(vdisp=self.vdisp)
-    ###         self.vdist = GaussianVelocity(**kwargs)
 
     def simulate(self,hold=False):
         stellar_mass = self.richness * self.stellar_mass()
@@ -60,16 +51,14 @@ class Dwarf(Source):
             # Physical plummer radius (kpc)
             rh = self.extension * np.sqrt(1-self.ellipticity)
             rpl = self.distance * np.tan(np.radians(rh)) 
-            print 'distance:',self.distance
-            print 'extension:',self.extension
-            print 'rpl:',rpl
             self.kinematics.rpl = rpl
 
-        vel = self.kinematics.sample_angsep(angsep,self.distance,hold=hold)
+            logging.debug('Syncing dwarf...')
+            logging.debug('distance: %s'%self.distance)
+            logging.debug('extension: %s'%self.extension)
+            logging.debug('rpl: %s'%self.kinematics.rpl)
 
-        # Don't forget to add the systemic velocity here and remove it
-        #from simulator 
-        #vel += self.vmean
+        vel = self.kinematics.sample_angsep(angsep,self.distance,hold=hold)
 
         self.reset_sync()
         return mag_1, mag_2, lon, lat, vel
