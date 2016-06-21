@@ -124,6 +124,8 @@ class Simulator(object):
                             help="Optional output file")
         parser.add_argument('--seed',type=int,default=None,
                             help="Random seed")
+        parser.add_argument('-v','--verbose',
+                            help="Output verbosity")
          
         group = parser.add_argument_group('Physical')
         group.add_argument('--stellar_mass',type=float,default=2000.,
@@ -143,6 +145,7 @@ class Simulator(object):
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--rvmax',type=float,default=None,
                            help='Radius of max circular velocity (kpc)')
+        # ADW: it would be nice to remove this
         egroup.add_argument('--rs',type=float,default=None,
                            help='NFW scale radius for DM halo (kpc)')
          
@@ -211,9 +214,7 @@ if __name__ == "__main__":
     kinematics=Dwarf.createKinematics(name=args.kinematics, 
                                       vdisp=args.vdisp, vmean=args.vmean,
                                       vmax=args.vmax, rvmax=args.rvmax)
-    
     dwarf.set_kinematics(kinematics)
-    #print dwarf
 
     instr= instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys

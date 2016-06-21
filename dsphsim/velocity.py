@@ -13,12 +13,12 @@ __author__ = "Alex Drlica-Wagner"
 import sys
 import copy
 from collections import OrderedDict as odict
+import logging
 
 import numpy as np
 import scipy.stats
 from scipy.integrate import romberg, quad, simps, trapz
 from scipy.interpolate import interp1d
-#from scipy.interpolate import interp2d, SmoothBivariateSpline
 from scipy.misc import derivative
 import matplotlib.tri as mtri
 
@@ -26,10 +26,12 @@ import vegas
 
 from ugali.analysis.model import Model,Parameter
 
-# Constants and sampling parameters
+# Constants and sampling parameters (left over from Fortran)
 nx=200;nes=200;nts=100;nvs=100;nrs=25
-Gn=6.67e-11*1.99e30*1.e-9 # Newton's constant in units of ...???
-n_grid = 1000;n_final = 5000
+# Newton's constant in (km^3 Msun^-1 s^-1)
+Gn=6.67e-11*1.99e30*1.e-9 
+# Vegas MCMC integration parameters
+n_grid = 1000; n_final = 5000
 
 def loginterp1d(x,y,**kwargs):
     """
@@ -37,7 +39,9 @@ def loginterp1d(x,y,**kwargs):
 
     See scipy.interpolate.interp1d for more details.
     """
+    err = np.seterr(divide='ignore')
     loginterp = interp1d(x,np.log(y),**kwargs)
+    np.seterr(**err)
     return lambda x: np.exp(loginterp(x))
 
 def triinterp(x,y,z,**kwargs):
@@ -145,25 +149,6 @@ class VelocityDistribution(Model):
     """
     Base class for velocity distribution.
     """
-    #_defaults = odict([
-    #    ('vmean', 0.0),  # km/s
-    #    ('vdisp', 1.0),    # Velocity dispersion (km/s)
-    #])
-
-    ### def __init__(self, *args, **kwargs):
-    ###     self._setup(**kwargs)
-
-    ### def _setup(self,**kwargs):
-    ###     for k in kwargs:
-    ###         if k not in self._defaults:
-    ###             msg = "Keyword argument not found in defaults"
-    ###             raise KeyError(msg)
-    ###  
-    ###     for k,v in self._defaults.items():
-    ###         kwargs.setdefault(k,v)
-    ###     
-    ###     self.__dict__.update(kwargs)
-
     _params = odict([
         ('vmean', Parameter(0.0) ),  # km/s
         ('vdisp', Parameter(1.0) ),    # Velocity dispersion (km/s)
@@ -280,7 +265,7 @@ class PhysicalVelocity(VelocityDistribution):
         Returns:
         integral : array as a function of e
         """
-        err = np.seterr(divide='ignore')
+        err = np.seterr(divide='ignore',invalid='ignore')
         method = method.lower()
         emin = np.min(energy)
 
@@ -483,7 +468,8 @@ class PhysicalVelocity(VelocityDistribution):
 
         z = []
         for i,_x in enumerate(xsteps):
-            print >> sys.stderr, '(%i) x = %.3f'%(i,_x)
+            #print >> sys.stderr, '(%i) x = %.3f'%(i,_x)
+            logging.debug('(%i) x = %.3f'%(i,_x))
             fv = self.velocity_distribution(_x,vsteps)
             z.append(fv)
 
@@ -507,15 +493,7 @@ class PhysicalVelocity(VelocityDistribution):
         self.v  = y
         self.fv = z  
 
-        #self.interp_pdf = interp2d(x,y,z,kind='linear')
-        #self.interp_cdf = interp2d(x,y,w,kind='linear')
-        #self.interp_icdf = interp2d(x,w,y,kind='linear')
-
-        #kw = dict(kx=1,ky=1,s=0)
-        #self.interp_pdf  = SmoothBivariateSpline(x.flat,y.flat,z.flat,**kw)
-        #self.interp_cdf  = SmoothBivariateSpline(x.flat,y.flat,w.flat,**kw)
-        #self.interp_icdf = SmoothBivariateSpline(x.flat,w.flat,y.flat,**kw)
-
+        # Triangular mesh interpolation from matplotlib
         self.interp_pdf  = triinterp(x,y,z)
         self.interp_cdf  = triinterp(x,y,w)
         self.interp_icdf = triinterp(x,w,y)
@@ -540,7 +518,6 @@ def velocityFactory(name, **kwargs):
     kernel.
     """
     import inspect
-    import logging
     fn = lambda member: inspect.isclass(member) and member.__module__==__name__
     classes = odict(inspect.getmembers(sys.modules[__name__], fn))
  
@@ -560,4 +537,3 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     args = parser.parse_args()
 
-    vel = VelocityDispersion()
