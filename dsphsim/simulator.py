@@ -11,8 +11,8 @@ import numpy as np
 
 import scipy.stats as stats
 
-from dwarf import Dwarf
-from instruments import factory as instrumentFactory
+from dsphsim.dwarf import Dwarf
+from dsphsim.instruments import factory as instrumentFactory
 
 
 def randerr(size=1,func='normal',**kwargs):
