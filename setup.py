@@ -19,6 +19,7 @@ setup(
     scripts = ['bin/dsphsim'],
     install_requires=[
         'python >= 2.7.0',
+        'vegas >= 3.0',
     ],
     packages=['dsphsim'],
     package_data={'dsphsim':['data/*.dat']}
