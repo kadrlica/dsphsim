@@ -145,19 +145,15 @@ class NumberStarsTactician(Tactician):
     def schedule(self, data, nstars=25, snr_thresh=5):
         mags = data['mag']
 
-        #nstar = self.instrument.nstar
-
         sort_idx = np.argsort(mags)
         sort_mag = mags[sort_idx]
-        num = len(sort_mag)
 
         min_exptime = self.instrument.maglim2exp(sort_mag)
-        snr = np.zeros_like(sort_mag)
-
-        self.obstime = min_exptime[nstars-1]
+        self.obstime = min_exptime[nstars]
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
+        nexp = 1
 
-        print "NumberStars Tactician -- "
+        print "NumberStars Tactician -- NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,self.obstime,(snr>snr_thresh).sum())
         return snr[np.argsort(sort_idx)]
     
 
