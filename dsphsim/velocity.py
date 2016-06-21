@@ -220,14 +220,30 @@ class PhysicalVelocity(VelocityDistribution):
     ])
     
     def _cache(self, name=None):
-        ### # Central potential as in 1406.6079 in (km/s)^2 
-        ### self.Phis = self.vmax**2/0.465**2 
-
         velmin = -1.5 * self.vmax 
         velmax = 1.5 * self.vmax 
         self.velocities = np.linspace(velmin,velmax,nvs)
 
         self.build_interps()
+
+    @classmethod
+    def rs2rvmax(cls, rs): 
+        return 2.163 * rs
+
+    @classmethod
+    def rvmax2rs(cls, rvmax): 
+        return rvmax/2.163
+
+    @classmethod
+    def rhos2vmax(cls, rhos, rs): 
+        G = 4.302e-6 # kpc Msun^-1 (km/s)^2
+        return rs  * np.sqrt( rhos * (4*np.pi*G)/4.625 )
+
+    @classmethod
+    def vmax2rhos(cls, vmax, rvmax): 
+        G = 4.302e-6 # kpc Msun^-1 (km/s)^2
+        rs = cls.rvmax2rs(rvmax)
+        return 4.625/(4*np.pi*G) * (vmax/rs)**2
 
     @property
     def Phis(self):
