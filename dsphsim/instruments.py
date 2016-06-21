@@ -12,6 +12,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
 
+# Minimum and maximum magnitudes for instruments
 MAGMIN = 16
 MAGMAX = 27
 
@@ -82,7 +83,7 @@ class Instrument(object):
         """Convert 5-sigma limiting magnitude into exposure time"""
         f = lambda e,m: cls.mag2snr(m,e) - snr
         _mag = np.linspace(MAGMIN,MAGMAX,25)
-        _exp = [brentq(f,0,1e6,args=(_m)) for _m in _mag]
+        _exp = [brentq(f,0,1e8,args=(_m)) for _m in _mag]
         interp = interp1d(_mag,_exp,bounds_error=False)
         return interp(maglim)
 
