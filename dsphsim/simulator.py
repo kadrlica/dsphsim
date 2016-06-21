@@ -75,9 +75,9 @@ class Simulator(object):
 
         # The true velocity, u, of each star is the sum of the mean velocity and
         # a component from the intrinsic velocity dispersion
+        # ADW: The mean velocity is applied in the velocity sampling
         #vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
         #vtrue = dwarf.vmean + vel
-        # ADW: The mean velocity is applied in the velocity sampling
         vtrue = vel
 
         # There are two components of the measurement uncertainty on
