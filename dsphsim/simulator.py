@@ -70,10 +70,7 @@ class Simulator(object):
         #color = (mag_1-mag_2)
 
         # The true velocity, u, of each star is the sum of the mean velocity and
-        # a component from the intrinsic velocity dispersion
-        # ADW: The mean velocity is applied in the velocity sampling
-        #vtrue = dwarf.vmean + dwarf.vdisp*randerr(nstar,'normal')
-        #vtrue = dwarf.vmean + vel
+        # a sampling of the intrinsic velocity dispersion
         vtrue = vel
 
         # There are two components of the measurement uncertainty on
@@ -101,7 +98,6 @@ class Simulator(object):
                  'ANGSEP','RPROJ','SNR',
                  'VTRUE','VSTAT','VSYS',
                  'VMEAS','VMEASERR','VSYSERR','VERR']
-        #data = [ra[sel],dec[sel],mag_1[sel],mag_2[sel],snr,vtrue,vstat,vsys,vmeas,vmeaserr,verr]
         data = [ra, dec,
                 mag_1, mag_2,
                 sep, rproj, snr,
@@ -117,70 +113,74 @@ class Simulator(object):
         parser = argparse.ArgumentParser(description=description,
                                          formatter_class=formatter)
         parser.add_argument('outfile',nargs='?',
-                            help="Optional output file")
+                            help="optional output file")
         parser.add_argument('--seed',type=int,default=None,
-                            help="Random seed")
-        parser.add_argument('-v','--verbose',
-                            help="Output verbosity")
+                            help="random seed")
+        parser.add_argument('-v','--verbose',action='store_true',
+                            help="verbose output")
+        parser.add_argument('-n','--nsims',type=int,default=1,
+                            help="number of simulations")
          
         group = parser.add_argument_group('Physical')
         group.add_argument('--stellar_mass',type=float,default=2000.,
-                            help='Stellar mass for simulated satellite (Msun)')
+                            help='stellar mass of satellite (Msun)')
 
         group = parser.add_argument_group('Kinematic')
         group.add_argument('--kinematics',type=str,default='Gaussian',
-                           help='Kinematic distribution')
+                           help='kinematic distribution function')
         group.add_argument('--vmean',type=float,default=60.,
-                            help='Mean systemic velocity (km/s)')
+                            help='mean systemic velocity (km/s)')
         # should be mutually exclusive with vmax and rs
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--vdisp',type=float,default=3.3,
-                            help='Gaussian velocity dispersion (km/s)')
+                            help='gaussian velocity dispersion (km/s)')
         egroup.add_argument('--vmax',type=float,default=10.0,
-                            help='Maximum circular velocity (km/s)')
+                            help='maximum circular velocity (km/s)')
         egroup.add_argument('--rhos',type=float,default=None,
-                            help='Maximum circular velocity (Msun/pc^3)')
+                            help='maximum circular velocity (Msun/pc^3)')
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--rvmax',type=float,default=0.4,
-                           help='Radius of max circular velocity (kpc)')
+                           help='radius of max circular velocity (kpc)')
         # ADW: it would be nice to remove this or
         egroup.add_argument('--rs',type=float,default=None,
-                           help='NFW scale radius for DM halo (kpc)')
+                           help='scale radius for NFW halo (kpc)')
          
         group = parser.add_argument_group('Isochrone')
         group.add_argument('--isochrone',type=str,default='Bressan2012',
-                            help='Isochrone type')
+                            help='isochrone type')
         group.add_argument('--age',type=float,default=12.0,
-                           help='Age of stellar population (Gyr)')
+                           help='age of stellar population (Gyr)')
         group.add_argument('--metallicity',type=float,default=2e-4,
-                           help='Metallicity of stellar population')
+                           help='metallicity of stellar population')
         group.add_argument('--distance_modulus',type=float,default=17.5,
-                            help='Distance modulus')
+                            help='distance modulus')
          
         group = parser.add_argument_group('Kernel')
         group.add_argument('--kernel',type=str,default='EllipticalPlummer',
-                           help='Kernel type')
+                           help='kernel type')
         group.add_argument('--ra',type=float,default=54.0,
-                           help='Centroid right acension (deg)')
+                           help='centroid right acension (deg)')
         group.add_argument('--dec',type=float,default=-54.0,
-                           help='Centroid declination (deg)')
+                           help='centroid declination (deg)')
         group.add_argument('--extension',type=float,default=0.1,
-                           help='Extension (deg)')
+                           help='projected half-light radius (deg)')
         group.add_argument('--ellipticity',type=float,default=0.0,
-                           help='Spatial extension (deg)')
+                           help='spatial extension (deg)')
         group.add_argument('--position_angle',type=float,default=0.0,
-                           help='Spatial extension (deg)')
+                           help='position angle east-of-north (deg)')
          
         group = parser.add_argument_group('Instrument')
         group.add_argument('--instrument',default='gmacs',
-                           help='Spectroscopic instrument')
+                           help='spectroscopic instrument')
         egroup = group.add_mutually_exclusive_group()
         egroup.add_argument('--exptime',default=3600.,type=float,
-                            help='Exposure time (s)')
+                            help='Eexposure time (s)')
         egroup.add_argument('--maglim',default=None,type=float,
-                            help='Limiting magnitude (S/N = 5)')
+                            help='limiting magnitude at SNR = 5')
+        egroup.add_argument('--nstars',default=None,type=int,
+                            help='number of stars with SNR = 5')
         group.add_argument('--vsys',default=None,type=float,
-                           help='Systematic velocity error (km/s)')
+                           help='systematic velocity error (km/s)')
         return parser
     
 if __name__ == "__main__":
@@ -215,18 +215,26 @@ if __name__ == "__main__":
                                       vmax=args.vmax, rvmax=args.rvmax)
     dwarf.set_kinematics(kinematics)
 
-    instr= instrumentFactory(args.instrument)
+    instr = instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys
 
-    # Run the simulation
-    data = Simulator.simulate(dwarf,instr,exptime)
+    for i in range(args.nsims):
+        # Run the simulation
+        data = Simulator.simulate(dwarf,instr,exptime)
+     
+        # Write output
+        if args.outfile:
+            outfile = args.outfile
+            if args.nsims > 1:
+                base,ext = os.path.splitext(outfile)
+                suffix = '_{:0{width}d}'.format(i+1,width=len(str(args.nsims)))
+                outfile = base + suffix + ext
+            if os.path.exists(outfile): os.remove(outfile)
+            print("Writing %s..."%outfile)
+            out = open(outfile,'w',1)
+        else:
+            out = sys.stdout
 
-    # Output
-    if args.outfile:
-        if os.path.exists(args.outfile): os.remove(args.outfile)
-        out = open(args.outfile,'w',1)
-    else:
-        out = sys.stdout
-    out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
-    np.savetxt(out,data,fmt='%-9.5f')
-    out.flush()
+        out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
+        np.savetxt(out,data,fmt='%-9.5f')
+        out.flush()
