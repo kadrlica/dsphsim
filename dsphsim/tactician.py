@@ -143,7 +143,7 @@ class NumberStarsTactician(Tactician):
     """
     Calculate exposure time to reach a certain number of stars.
 
-    WARNING: May not deal with saturated stars as expected.
+    WARNING: May not deal with saturated stars as expected...
     """
     def schedule(self, data, nstars=25, snr_thresh=5):
         mags = data['mag']
