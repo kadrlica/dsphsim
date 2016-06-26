@@ -30,7 +30,7 @@ class Dwarf(Source):
         self.set_model('kinematics',self.createKinematics())
         super(Dwarf,self).__init__(name,**kwargs)
 
-    def simulate(self,hold=False):
+    def simulate(self):
         stellar_mass = self.richness * self.isochrone.stellar_mass()
         mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
         lon, lat     = self.kernel.simulate(len(mag_1))
@@ -40,25 +40,26 @@ class Dwarf(Source):
         #if not hold: self._create_vdist()
         angsep       = self.kernel.angsep(lon,lat)
 
+        # If the extension, ellipticity, distance, or kinematics
+        # change then we need to regenerate the velocity distribution
+        sync = self.get_sync('kernel') \
+               or self.get_sync('isochrone') \
+               or self.get_sync('kinematics')
 
-        # For the time being, always sync kinematics
-        #sync = np.any(self._sync.values())
-        sync = True
-        hold = ~sync
-
-        # Doesn't really need to be done for richness...
+        if sync: logging.debug("Syncing velocity distribution")
+        # Doesn't need to be done for richness...
+        # Move to velocity.py?
         if sync:
             # Physical plummer radius (kpc)
             rh = self.extension * np.sqrt(1-self.ellipticity)
             rpl = self.distance * np.tan(np.radians(rh)) 
             self.kinematics.rpl = rpl
 
-            logging.debug('Syncing dwarf...')
-            logging.debug('distance: %s'%self.distance)
-            logging.debug('extension: %s'%self.extension)
-            logging.debug('rpl: %s'%self.kinematics.rpl)
+        logging.debug('distance: %s'%self.distance)
+        logging.debug('extension: %s'%self.extension)
+        logging.debug('rpl: %s'%self.kinematics.rpl)
 
-        vel = self.kinematics.sample_angsep(angsep,self.distance,hold=hold)
+        vel = self.kinematics.sample_angsep(angsep,self.distance,sync=sync)
 
         self.reset_sync()
         return mag_1, mag_2, lon, lat, vel
