@@ -20,9 +20,10 @@ setup(
     install_requires=[
         'python >= 2.7.0',
         'vegas >= 3.0',
+        'ugali >= 1.6.0',
     ],
     packages=['dsphsim'],
-    package_data={'dsphsim':['data/*.dat']}
+    package_data={'dsphsim':['data/*.dat']},
     description="Simple automated interface to scientific wiki tools.",
     long_description=read('README.md'),
     platforms='any',
