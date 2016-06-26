@@ -100,10 +100,15 @@ if __name__ == "__main__":
 
     kwargs = dict(nwalkers=args.nwalkers,nburn=args.nburn,nsteps=args.nsteps)
     vel = data[args.vel]
+
     if args.velerr is None or args.velerr.lower() == 'none':
         velerr = np.zeros_like(vel)
     else:
         velerr = data[args.velerr]
+
+    # Remove nan values (is this fair?)
+    cut = (np.isnan(vel) | np.isnan(velerr))
+    vel,velerr = vel[~cut],velerr[~cut]
 
     samples = mcmc(vel,velerr,**kwargs)
 
