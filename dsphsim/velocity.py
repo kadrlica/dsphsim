@@ -43,7 +43,7 @@ def loginterp1d(x,y,**kwargs):
     np.seterr(**err)
     return lambda x: np.exp(loginterp(x))
 
-def triinterp(x,y,z,**kwargs):
+def triinterp2d(x,y,z,**kwargs):
     """
     Create a linear triangular interpolation using the mlab implementation.
 
@@ -156,13 +156,13 @@ class VelocityDistribution(Model):
     ])
 
 
-    def _sample(self, radius, hold=False):
+    def _sample(self, radius, sync=True):
         """
         Do the sampling (overloaded by subclass)
         """
         return self.vdisp * np.ones_like(radius)
 
-    def sample(self, radius, hold=False):
+    def sample(self, radius, sync=True):
         """
         Draw a random sample of velocities from the inverse CDF.
 
@@ -173,13 +173,13 @@ class VelocityDistribution(Model):
         velocity : Randomly sampled velocities for each star (km/s)
         """
         scalar = np.isscalar(radius)
-        vel = self._sample(np.atleast_1d(radius))
+        vel = self._sample(np.atleast_1d(radius),sync)
         # Don't forget the mean velocity
         vel += self.vmean
         if scalar: return np.asscalar(vel)
         return vel
 
-    def sample_angsep(self, angsep, distance, hold=False):
+    def sample_angsep(self, angsep, distance, sync=True):
         """
         Draw a random sample of velocities from the inverse CDF.
 
@@ -191,8 +191,7 @@ class VelocityDistribution(Model):
         velocity : Randomly sampled velocities for each star (km/s)
         """
         radius = distance * np.tan(np.radians(angsep))
-        return self.sample(radius,hold)
-
+        return self.sample(radius,sync)
 
 class GaussianVelocity(VelocityDistribution):
     """
@@ -205,7 +204,6 @@ class GaussianVelocity(VelocityDistribution):
 
     def _sample(self, radius, hold=False):
         return np.random.normal(0.0,self.vdisp,size=len(radius))
-
 
 class PhysicalVelocity(VelocityDistribution):
     """
@@ -511,16 +509,17 @@ class PhysicalVelocity(VelocityDistribution):
         self.fv = z  
 
         # Triangular mesh interpolation from matplotlib
-        self.interp_pdf  = triinterp(x,y,z)
-        self.interp_cdf  = triinterp(x,y,w)
-        self.interp_icdf = triinterp(x,w,y)
+        self.interp_pdf  = triinterp2d(x,y,z)
+        self.interp_cdf  = triinterp2d(x,y,w)
+        self.interp_icdf = triinterp2d(x,w,y)
 
-    def _sample(self, radius, hold=False):
+    def _sample(self, radius, sync=True):
         """
         Sample from the inverse CDF.
         """
         xproj = np.atleast_1d(radius)/self.rs
-        if not hold: self.interp_vdist(xproj)
+        if sync: 
+            self.interp_vdist(xproj)
         i = np.random.uniform(size=len(xproj))
         vel = self.interp_icdf(xproj,i).filled(np.nan)
         return vel
@@ -528,25 +527,28 @@ class PhysicalVelocity(VelocityDistribution):
 Gaussian = GaussianVelocity
 Physical = PhysicalVelocity
 
-def velocityFactory(name, **kwargs):
+# ADW: It would be good to replace this with ugali.utils.factory;
+# however, this needs to accept unused kwargs.
+def factory(name, **kwargs):
     """
-    Factory for creating spatial kernels. Arguments
-    are passed directly to the constructor of the chosen
-    kernel.
     """
     import inspect
-    fn = lambda member: inspect.isclass(member) and member.__module__==__name__
-    classes = odict(inspect.getmembers(sys.modules[__name__], fn))
- 
-    if name not in classes.keys():
-        msg = "%s not found in classes:\n %s"%(name,classes.keys())
-        logging.error(msg)
-        msg = "Unrecognized kernel: %s"%name
-        raise Exception(msg)
 
-    # Allow the user to pass un-used arguments...
-    kw = {k:v for k,v in kwargs.items() if k in classes[name]._params.keys()}
-    return classes[name](**kw)
+    cls = name
+    module = __name__
+    fn = lambda member: inspect.isclass(member) and member.__module__==module
+    classes = odict(inspect.getmembers(sys.modules[module], fn))
+    members = odict([(k.lower(),v) for k,v in classes.items()])
+    
+    lower = cls.lower()
+    if lower not in members.keys():
+        msg = "Unrecognized class: %s.%s"%(module,cls)
+        raise KeyError(msg)
+
+    kw = {k:v for k,v in kwargs.items() if k in members[lower]._params.keys()}
+    return members[lower](**kw)
+
+velocityFactory = factory
     
 if __name__ == "__main__":
     import argparse
