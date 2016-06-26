@@ -31,7 +31,7 @@ class Dwarf(Source):
         super(Dwarf,self).__init__(name,**kwargs)
 
     def simulate(self,hold=False):
-        stellar_mass = self.richness * self.stellar_mass()
+        stellar_mass = self.richness * self.isochrone.stellar_mass()
         mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
         lon, lat     = self.kernel.simulate(len(mag_1))
 
@@ -69,6 +69,7 @@ class Dwarf(Source):
     def set_kinematics(self,kinematics): 
         self.set_model('kinematics',kinematics)
 
+        
     @property
     def kinematics(self):
         return self.models['kinematics']
