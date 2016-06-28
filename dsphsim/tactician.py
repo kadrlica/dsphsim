@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 """
-Choose how to target a field.
+Choose how to target a field and determine how SNR increases with
+exposure time.
+
 """
 
 import numpy as np
-
-class Targeter(object):
-    def __init__(self,*args,**kwargs):
-        pass
 
 class Tactician(object):
     def __init__(self, instrument, exptime=1000.):
@@ -158,7 +156,6 @@ class NumberStarsTactician(Tactician):
 
         print "NumberStars Tactician -- NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,self.obstime,(snr>snr_thresh).sum())
         return snr[np.argsort(sort_idx)]
-    
 
 if __name__ == "__main__":
     import argparse
