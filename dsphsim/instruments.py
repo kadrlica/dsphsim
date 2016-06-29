@@ -17,24 +17,28 @@ MAGMIN = 15
 MAGMAX = 27
 
 def factory(name, **kwargs):
-    """
-    Factory for creating spatial kernels. Arguments
-    are passed directly to the constructor of the chosen
-    kernel.
-    """
-    fn = lambda member: inspect.isclass(member) and member.__module__==__name__
-    classes = odict(inspect.getmembers(sys.modules[__name__], fn))
-    members = odict([(k.lower(),v) for k,v in classes.items()])
-    
-    namelower = name.lower()
-    if namelower not in members.keys():
-        msg = "%s not found in instruments:\n %s"%(name,classes.keys())
-        #logger.error(msg)
-        print msg
-        msg = "Unrecognized instrument: %s"%name
-        raise Exception(msg)
- 
-    return members[namelower](**kwargs)
+    from ugali.utils.factory import factory
+    return factory(name, module=__name__, **kwargs)
+
+### def factory(name, **kwargs):
+###     """
+###     Factory for creating spatial kernels. Arguments
+###     are passed directly to the constructor of the chosen
+###     kernel.
+###     """
+###     fn = lambda member: inspect.isclass(member) and member.__module__==__name__
+###     classes = odict(inspect.getmembers(sys.modules[__name__], fn))
+###     members = odict([(k.lower(),v) for k,v in classes.items()])
+###     
+###     namelower = name.lower()
+###     if namelower not in members.keys():
+###         msg = "%s not found in instruments:\n %s"%(name,classes.keys())
+###         #logger.error(msg)
+###         print msg
+###         msg = "Unrecognized instrument: %s"%name
+###         raise Exception(msg)
+###  
+###     return members[namelower](**kwargs)
 
 
 class Instrument(object):
@@ -52,8 +56,8 @@ class Instrument(object):
         self._setup(**kwargs)
 
     def _setup(self,**kwargs):
-        defaults = self.default_dict()
-        for k,v in kwargs:
+        defaults = self.defaults()
+        for k,v in kwargs.items():
             if k not in defaults:
                 msg = "Keyword argument not found in defaults"
                 raise KeyError(msg)
@@ -63,9 +67,11 @@ class Instrument(object):
         
         self.__dict__.update(kwargs)
 
+        self.MAGMIN = MAGMIN
+        self.MAGMAX = MAGMAX
 
     @classmethod
-    def default_dict(cls):
+    def defaults(cls):
         return copy.deepcopy(cls._defaults)
 
     @classmethod
@@ -73,6 +79,7 @@ class Instrument(object):
         """Convert stellar magnitude into SNR for given exposure time."""
         # magnitude to snr file
         datafile = os.path.join(cls._datadir,cls._filename)
+        # ADW: We may not want to read the file every time?
         _mag,_snr = np.genfromtxt(datafile,usecols=[0,1]).T
         exp0 = cls._exptime0
         interp = interp1d(_mag,_snr,bounds_error=False)

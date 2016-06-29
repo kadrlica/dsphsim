@@ -10,6 +10,7 @@ import scipy.stats as stats
 
 from dsphsim.dwarf import Dwarf
 from dsphsim.instruments import factory as instrumentFactory
+from dsphsim.tactician import factory as tacticianFactory
 
 def randerr(size=1,func='normal',**kwargs):
     """ Return a sample from a random variate. """
@@ -43,17 +44,24 @@ class Simulator(object):
         return out
     
     @staticmethod
-    def simulate(dwarf,instrument,exp=10000):
+    def simulate(dwarf,tactician,**kwargs):
         """ Simulate observation """
 
         # Set the second band to 'i' (matches CaT lines)
         dwarf.band_1 = 'g'; dwarf.band_2 = 'i'
-        mag_1,mag_2,ra,dec,velocity = dwarf.simulate()        
-        snr = instrument.mag2snr(mag_2,exp)
+        mag_1,mag_2,ra,dec,velocity = dwarf.simulate()
+
+        # Draw the SNR from the instrument and observation tactician
+        # Use the i-band magnitude (eventually may include ra,dec too)
+        data = np.rec.fromarrays([mag_2],names=['mag'])
+        snr = tactician.schedule(data,**kwargs)
+        #snr = instrument.mag2snr(mag_2,exp)
 
         #olderr = np.seterr(all='ignore')
         # Allow user to change these thresholds?
-        sel = (mag_1 > 16) & (np.nan_to_num(snr) > 5)
+        snr_thresh = tactician.snr_thresh
+        saturate = tactician.instrument.MAGMIN
+        sel = (mag_1 > saturate) & (np.nan_to_num(snr) > snr_thresh)
         nstar = sel.sum()
         #np.seterr(**olderr)
 
@@ -75,8 +83,8 @@ class Simulator(object):
 
         # There are two components of the measurement uncertainty on
         # the velocity of each star
-        vstaterr = instrument.snr2err(snr)
-        vsyserr = instrument.vsys * np.ones_like(snr)
+        vstaterr = tactician.instrument.snr2err(snr)
+        vsyserr = tactician.instrument.vsys * np.ones_like(snr)
 
         # The measured velocity is the true velocity plus a component from the
         # instrumental measurement error
@@ -172,15 +180,20 @@ class Simulator(object):
         group = parser.add_argument_group('Instrument')
         group.add_argument('--instrument',default='gmacs',
                            help='spectroscopic instrument')
-        egroup = group.add_mutually_exclusive_group()
-        egroup.add_argument('--exptime',default=3600.,type=float,
-                            help='Eexposure time (s)')
-        egroup.add_argument('--maglim',default=None,type=float,
-                            help='limiting magnitude at SNR = 5')
-        egroup.add_argument('--nstars',default=None,type=int,
-                            help='number of stars with SNR = 5')
         group.add_argument('--vsys',default=None,type=float,
                            help='systematic velocity error (km/s)')
+
+        group = parser.add_argument_group('Tactician')
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--exptime',default=3600.,type=float,
+                            help='Exposure time (s)')
+        egroup.add_argument('--maglim',default=None,type=float,
+                            help='limiting magnitude (given snr-thresh)')
+        egroup.add_argument('--nstars',default=None,type=int,
+                            help='number of stars (given snr-thresh)')
+        group.add_argument('--snr-thresh',default=5,type=float,
+                           help='signal-to-noise threshold')
+        
         return parser
     
 if __name__ == "__main__":
@@ -190,9 +203,7 @@ if __name__ == "__main__":
 
     if args.seed is not None:
         np.random.seed(args.seed)
-
-    exptime = mag2exp(args.maglim) if args.maglim else args.exptime
-
+    
 
     dwarf = Dwarf()
     isochrone=Dwarf.createIsochrone(name=args.isochrone, age=args.age,
@@ -215,12 +226,29 @@ if __name__ == "__main__":
                                       vmax=args.vmax, rvmax=args.rvmax)
     dwarf.set_kinematics(kinematics)
 
+    # Build and configure the instrument
     instr = instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys
 
+    # Build and configure the tactician (holds the instrument)
+    if args.maglim:
+        print 'maglim'
+        tact = tacticianFactory('MaglimTactician',instrument=instr,
+                                obstime=None,snr_thresh=args.snr_thresh,
+                                maglim=args.maglim)
+    elif args.nstars:
+        print 'nstar'
+        tact = tacticianFactory('NStarsTactician',instrument=instr,
+                                obstime=None,snr_thresh=args.snr_thresh,
+                                nstars=args.nstars)
+    elif args.exptime:
+        print 'obstime'
+        tact = tacticianFactory('ObstimeTactician',instrument=instr,
+                                obstime=args.exptime,snr_thresh=args.snr_thresh)
+        
     for i in range(args.nsims):
         # Run the simulation
-        data = Simulator.simulate(dwarf,instr,exptime)
+        data = Simulator.simulate(dwarf,tact)
      
         # Write output
         if args.outfile:

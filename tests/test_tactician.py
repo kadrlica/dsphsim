@@ -8,30 +8,30 @@ import numpy as np
 import pylab as plt
 
 import dsphsim.tactician
-import dsphsim.dsphsim
 import dsphsim.instruments
 import dsphsim.dwarf
 
 dwarf = dsphsim.dwarf.Dwarf()
-mag_1, mag_2, lon, lat = dwarf.simulate()
+mag_1, mag_2, lon, lat, vel = dwarf.simulate()
 mags = mag_1
 data = np.rec.fromarrays([mag_1,lon,lat],names=['mag','lon','lat'])
-inst = dsphsim.instruments.factory('GMACS')
+#inst = dsphsim.instruments.factory('GMACS')
+inst = 'GMACS'
 obstime = 3600.
 times = np.linspace(500,36000,72)
 times = np.logspace(1,5,25)
 
-basetac = dsphsim.tactician.Tactician(inst)
+obstac = dsphsim.tactician.ObstimeTactician(inst)
 dyntac = dsphsim.tactician.DynamicTimeTactician(inst)
 equtac = dsphsim.tactician.EqualTimeTactician(inst)
-numtac = dsphsim.tactician.NumberStarsTactician(inst)
+numtac = dsphsim.tactician.NStarsTactician(inst)
 
-x,y,z = [],[],[]
+x,y,z,w = [],[],[],[]
 for obstime in times:
     print "Observation time: %s"%obstime
-    x += [basetac.schedule(data,obstime)]
-    y += [dyntac.schedule(data,obstime)]
-    z += [equtac.schedule(data,obstime)]
+    x += [obstac.schedule(data,obstime=obstime)]
+    y += [dyntac.schedule(data,obstime=obstime)]
+    z += [equtac.schedule(data,obstime=obstime)]
     w += [numtac.schedule(data,nstars=25)]
 
 

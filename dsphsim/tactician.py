@@ -1,20 +1,120 @@
 #!/usr/bin/env python
 """
 Choose how to target a field and determine how SNR increases with
-exposure time.
+exposure time (and number of stars).
 
 """
+import copy
+import logging
+from collections import OrderedDict as odict
 
 import numpy as np
 
+from dsphsim.instruments import factory as instrumentFactory
+
+def factory(name, **kwargs):
+    from ugali.utils.factory import factory
+    return factory(name, module=__name__, **kwargs)
+
 class Tactician(object):
-    def __init__(self, instrument, exptime=1000.):
-        self.instrument = instrument
-        self.exptime = exptime
+    """ Base class for observation tactician. """
+    _defaults = odict([
+        ('obstime',3600),  # Observation time (s)
+        ('snr_thresh',5),  # Signal-to-noise threshold
+    ])
+
+    def __init__(self, instrument, **kwargs):
+        if isinstance(instrument,basestring):
+            self.instrument = instrumentFactory(instrument)
+        else:
+            self.instrument = instrument
+        self._setup(**kwargs)
+
+    def _setup(self,**kwargs):
+        defaults = self.defaults()
+        for k,v in kwargs.items():
+            if k not in defaults:
+                msg = "Keyword argument not found in defaults"
+                raise KeyError(msg)
+
+        for k,v in defaults.items():
+            kwargs.setdefault(k,v)
         
-    def schedule(self, data, obstime=None):
-        if obstime is None: obstime = self.obstime
-        return self.instrument.mag2snr(data['mag'],obstime)
+        self.__dict__.update(kwargs)
+        
+    @classmethod
+    def defaults(cls):
+        return copy.deepcopy(cls._defaults)
+
+    def schedule(self, data):
+        """
+        Function to return snr for each star in 'data'
+        """
+        msg = "schedule must be implemented by subclass"
+        raise Exception(msg)
+
+class ObstimeTactician(Tactician): 
+    """ Simple tactician that allocates the same observation time to every star.
+
+    """
+    def schedule(self, data, **kwargs):
+        obstime = kwargs.get('obstime',self.obstime)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+        snr = self.instrument.mag2snr(data['mag'],obstime)
+
+        num = (snr>snr_thresh).sum()
+        msg = "%s -- ObsTime: %.2f, NStars: %i"%(self.__class__.__name__,obstime,num)
+        return snr
+
+class MaglimTactician(Tactician):
+    """Simple tactician that converts a magnitude limit to an exposure
+    time and applies that exposure time to every star.
+
+    """
+    _defaults = odict(Tactician._defaults.items() +
+                      [('maglim',24.)]
+    )
+
+    def schedule(self, data, **kwargs):
+        maglim = kwargs.get('maglim',self.maglim)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+        obstime = self.instrument.maglim2exp(maglim,snr_thresh)
+        snr = self.instrument.mag2snr(data['mag'],obstime)
+
+        num = (snr>snr_thresh).sum()
+        msg = "%s -- Maglim: %.2f, ObsTime: %.2f, NStars: %i"%(self.__class__.__name__,maglim,obstime,num)
+        logging.debug(msg)
+
+        return snr
+
+class NStarsTactician(Tactician): 
+    """
+    Calculate exposure time to reach a certain number of stars.
+
+    WARNING: May not deal with saturated stars as expected...
+    """
+    _defaults = odict(Tactician._defaults.items() +
+                      [('nstars',25)]
+    )
+
+    def schedule(self, data, **kwargs):
+        nstars     = kwargs.get('nstars',self.nstars)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+
+        mags = data['mag']
+
+        sort_idx = np.argsort(mags)
+        sort_mag = mags[sort_idx]
+
+        min_exptime = self.instrument.maglim2exp(sort_mag,snr_thresh)
+        self.obstime = min_exptime[nstars-1]
+        snr = self.instrument.mag2snr(sort_mag,self.obstime)
+        nexp = 1
+
+        num = (snr>snr_thresh).sum()
+        msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,self.obstime,num)
+        logging.debug(msg)
+        return snr[np.argsort(sort_idx)]
 
 
 class EqualTactician(Tactician): 
@@ -25,8 +125,10 @@ class EqualTactician(Tactician):
     4) Divide by new number of stars to get time per star
     5) Iterate until convergence
     """
-    def schedule(self, data, obstime=None, snr_thresh=5):
-        if obstime is None: obstime = self.obstime
+    def schedule(self, data, **kwargs):
+        obstime    = kwargs.get('obstime',self.obstime)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+
         mags = data['mag']
         total_time = float(self.instrument.nstar * obstime)
         eff_time = obstime 
@@ -44,7 +146,8 @@ class EqualTactician(Tactician):
 
             num = (snr>snr_thresh).sum()
             i += 1
-        print "Niter: %i, NExp: %i, ExpTime: %.2f, NStars: %i"%(i,total_time/eff_time,eff_time,num)
+            msg = "%s -- Niter: %i, NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,i,total_time/eff_time,eff_time,num)
+            logging.debug(msg)
 
         return snr
 
@@ -58,9 +161,16 @@ class EqualTimeTactician(Tactician):
     constant per exposure.
 
     """
-    def schedule(self, data, obstime=None, snr_thresh=5, max_nexp=None):
-        if obstime is None: obstime = self.obstime
-        if max_nexp is None or max_exps < 0: max_nexp = np.inf
+    _defaults = odict(Tactician._defaults.items() +
+                      [('max_nexp',np.inf)]
+    )
+
+    def schedule(self, data, **kwargs):
+        obstime    = kwargs.get('obstime',self.obstime)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+        max_nexp   = kwargs.get('max_nexp',self.max_nexp)
+        
+        if max_nexp < 0: max_nexp = np.inf
 
         mags = data['mag']
         
@@ -89,7 +199,8 @@ class EqualTimeTactician(Tactician):
         eff_exptime = total_time/nexp
         snr[:idx] = self.instrument.mag2snr(sort_mag[:idx],eff_exptime)
 
-        print "SmartTactician -- NExp: %i, ExpTime: %.2f, NStars: %i"%(nexp,eff_exptime,idx)
+        msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,eff_exptime,idx)
+        logging.debug(msg)
         
         return snr[np.argsort(sort_idx)]
 
@@ -103,8 +214,10 @@ class DynamicTimeTactician(Tactician):
 
     This algorithm does not deal with overheads, which will be constant per exposure.
     """
-    def schedule(self, data, obstime=None, snr_thresh=5):
-        if obstime is None: obstime = self.obstime
+    def schedule(self, data, **kwargs):
+        obstime    = kwargs.get('obstime',self.obstime)
+        snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
+
         mags = data['mag']
 
         nstar = self.instrument.nstar
@@ -133,29 +246,12 @@ class DynamicTimeTactician(Tactician):
             used_time += eff_time
             nexp = i+1
 
-        print "MaxStars Tactician -- NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,eff_time,(snr>0).sum())
+        num = (snr>0).sum()
+        msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,eff_time,num)
+        logging.debug(msg)
+
         return snr[np.argsort(sort_idx)]
 
-
-class NumberStarsTactician(Tactician): 
-    """
-    Calculate exposure time to reach a certain number of stars.
-
-    WARNING: May not deal with saturated stars as expected...
-    """
-    def schedule(self, data, nstars=25, snr_thresh=5):
-        mags = data['mag']
-
-        sort_idx = np.argsort(mags)
-        sort_mag = mags[sort_idx]
-
-        min_exptime = self.instrument.maglim2exp(sort_mag)
-        self.obstime = min_exptime[nstars-1]
-        snr = self.instrument.mag2snr(sort_mag,self.obstime)
-        nexp = 1
-
-        print "NumberStars Tactician -- NExp: %i, ExpTime: %.2f, NStar: %i"%(nexp,self.obstime,(snr>snr_thresh).sum())
-        return snr[np.argsort(sort_idx)]
 
 if __name__ == "__main__":
     import argparse
