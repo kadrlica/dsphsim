@@ -1,37 +1,41 @@
-import sys
-import os
-try: from setuptools import setup
-except ImportError: from distutils.core import setup
+from setuptools import setup
 import versioneer
 
-here = os.path.abspath(os.path.dirname(__file__))
-
-def read(filename):
-    return open(os.path.join(here,filename)).read()
+NAME = 'dsphsim'
+CLASSIFIERS = """\
+Development Status :: 2 - Pre-Alpha
+Intended Audience :: Science/Research
+Intended Audience :: Developers
+Programming Language :: Python
+Natural Language :: English
+Topic :: Scientific/Engineering
+Topic :: Scientific/Engineering :: Physics
+Topic :: Scientific/Engineering :: Astronomy
+Operating System :: MacOS
+Operating System :: POSIX
+License :: OSI Approved :: MIT License
+"""
+URL = 'https://github.com/kadrlica/%s'%NAME
+DESC = "Simulate dwarf galaxy stellar distributions"
+LONG_DESC = "See %s"%URL
 
 setup(
-    name='dsphsim',
+    name=NAME,
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    url='https://github.com/kadrlica/dsphsim',
+    url=URL,
     author='Alex Drlica-Wagner',
     author_email='kadrlica@fnal.gov',
     scripts = ['bin/dsphsim'],
     install_requires=[
         'python >= 2.7.0',
-        'vegas >= 3.0',
         'ugali >= 1.6.0',
+        'vegas >= 3.0',
     ],
     packages=['dsphsim'],
     package_data={'dsphsim':['data/*.dat']},
-    description="Simple automated interface to scientific wiki tools.",
-    long_description=read('README.md'),
+    description=DESC,
+    long_description=LONG_DESC,
     platforms='any',
-    keywords='astronomy',
-    classifiers = [
-        'Programming Language :: Python',
-        'Development Status :: 2 - Pre-Alpha',
-        'Natural Language :: English',
-        'Intended Audience :: Science/Research',
-    ]
+    classifiers = [_f for _f in CLASSIFIERS.split('\n') if _f]
 )
