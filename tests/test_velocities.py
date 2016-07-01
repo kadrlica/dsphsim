@@ -17,7 +17,7 @@ from ugali.utils.projector import angsep
 np.random.seed(0)
 
 kwargs = dict(distance_modulus=17.5,extension=0.1,rs=1.0,richness=1e4,
-)
+              kinematics='PhysicalVelocity')
 kwargs.update(vmax=20)
 
 dwarf = dsphsim.dwarf.Dwarf(**kwargs)

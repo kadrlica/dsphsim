@@ -5,7 +5,6 @@ Generic python script.
 __author__ = "Alex Drlica-Wagner"
 
 import numpy as np
-import pylab as plt
 
 import dsphsim.tactician
 import dsphsim.instruments
@@ -34,23 +33,25 @@ for obstime in times:
     z += [equtac.schedule(data,obstime=obstime)]
     w += [numtac.schedule(data,nstars=25)]
 
+if os.environ.get('DISPLAY'):
+    import pylab as plt
 
-plt.figure()
-plt.loglog(times,[(_x>5).sum() for _x in x],label='Single Exposure')
-plt.loglog(times,[(_x>5).sum() for _x in y],label='Dynamic Exposure')
-plt.loglog(times,[(_x>5).sum() for _x in z],label='Equal Exposure')
-plt.legend(loc='upper left',fontsize=12)
-plt.xlabel("Observation Time (s)")
-plt.ylabel("Number of Stars (S/N > 5)")
-plt.savefig('nstars_vs_exp.png',bbox_inches='tight')
-
-plt.figure()
-plt.loglog(times,[np.nansum(_x) for _x in x],label='Single Exposure')
-plt.loglog(times,[np.nansum(_x) for _x in y],label='Dynamic Exposure')
-plt.loglog(times,[np.nansum(_x) for _x in z],label='Equal Exposure')
-plt.legend(loc='upper left',fontsize=12)
-plt.xlabel("Observation Time (s)")
-plt.ylabel("Sum of S/N")
-plt.savefig('totsnr_vs_exp.png',bbox_inches='tight')
-
-plt.ion()
+    plt.figure()
+    plt.loglog(times,[(_x>5).sum() for _x in x],label='Single Exposure')
+    plt.loglog(times,[(_x>5).sum() for _x in y],label='Dynamic Exposure')
+    plt.loglog(times,[(_x>5).sum() for _x in z],label='Equal Exposure')
+    plt.legend(loc='upper left',fontsize=12)
+    plt.xlabel("Observation Time (s)")
+    plt.ylabel("Number of Stars (S/N > 5)")
+    plt.savefig('nstars_vs_exp.png',bbox_inches='tight')
+     
+    plt.figure()
+    plt.loglog(times,[np.nansum(_x) for _x in x],label='Single Exposure')
+    plt.loglog(times,[np.nansum(_x) for _x in y],label='Dynamic Exposure')
+    plt.loglog(times,[np.nansum(_x) for _x in z],label='Equal Exposure')
+    plt.legend(loc='upper left',fontsize=12)
+    plt.xlabel("Observation Time (s)")
+    plt.ylabel("Sum of S/N")
+    plt.savefig('totsnr_vs_exp.png',bbox_inches='tight')
+     
+    plt.ion()

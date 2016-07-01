@@ -7,7 +7,6 @@ import os
 import numpy as np
 import pylab as plt
 import emcee
-import corner
 import scipy.stats
 
 from ugali.analysis.mcmc import Samples
@@ -75,6 +74,7 @@ def mcmc(vel, vel_err, **kwargs):
     return samples
 
 def plot(samples,nburn=50,clip=5):
+    import corner
     chain = samples.get(burn=nburn,clip=clip)
     figure = corner.corner(chain,labels=["$\sigma$ (km/s)", "$\mu$ (km/s)"])
     return figure
