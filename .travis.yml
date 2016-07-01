@@ -20,9 +20,9 @@ install:
   - conda info -a
   - conda create -q -n travis-env python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy healpy pyyaml emcee nose -c fermipy -c astropy
   - source activate travis-env
-  #- pip install Cython --install-option="--no-cython-compile"
+  - pip install Cython --install-option="--no-cython-compile"
   - cat requirements.txt
-  - pip install -r requirements.txt
+  - pip install -v -r requirements.txt
 
 # command to run tests
 script: 
