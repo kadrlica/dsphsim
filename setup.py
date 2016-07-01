@@ -29,7 +29,7 @@ setup(
     scripts = ['bin/dsphsim'],
     install_requires=[
         'python >= 2.7.0',
-        'ugali >= 1.6.0',
+        'ugali >= 1.6.0 --install-option "--isochrones"',
         'vegas >= 3.0',
     ],
     packages=['dsphsim'],
