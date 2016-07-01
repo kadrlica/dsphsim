@@ -3,7 +3,7 @@
 Generic python script.
 """
 __author__ = "Alex Drlica-Wagner"
-
+import os
 import numpy as np
 
 import dsphsim.tactician

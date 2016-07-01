@@ -27,7 +27,10 @@ class Dwarf(Source):
         ])
     
     def __init__(self,name=None, **kwargs):
-        self.set_model('kinematics',self.createKinematics())
+        kw = dict()
+        if kwargs.get('kinematics'):
+            kw.update(name=kwargs.pop('kinematics'))
+        self.set_model('kinematics',self.createKinematics(**kw))
         super(Dwarf,self).__init__(name,**kwargs)
 
     def simulate(self):

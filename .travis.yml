@@ -21,8 +21,8 @@ install:
   - conda create -q -n travis-env python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy healpy pyyaml emcee corner nose -c fermipy -c astropy
   - source activate travis-env
   - pip install Cython --install-option="--no-cython-compile"
-  - pip install vegas
-  - pip install ugali --no-deps --install-option="--isochrones"
+  #- pip install vegas
+  #- pip install ugali --no-deps --install-option="--isochrones"
   - pip install -r requirements.txt
 
 # command to run tests
