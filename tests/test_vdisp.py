@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 """
-Generic python script.
+Test fitting the velocity dispersion.
 """
-__author__ = "Alex Drlica-Wagner"
 
 import numpy as np
 import pylab as plt

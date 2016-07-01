@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Generic python script.
+Test the exposure tacticians
 """
-__author__ = "Alex Drlica-Wagner"
+
 import os
 import numpy as np
 
@@ -14,12 +14,12 @@ dwarf = dsphsim.dwarf.Dwarf()
 mag_1, mag_2, lon, lat, vel = dwarf.simulate()
 mags = mag_1
 data = np.rec.fromarrays([mag_1,lon,lat],names=['mag','lon','lat'])
-#inst = dsphsim.instruments.factory('GMACS')
-inst = 'GMACS'
+
 obstime = 3600.
 times = np.linspace(500,36000,72)
 times = np.logspace(1,5,25)
 
+inst = 'GMACS'
 obstac = dsphsim.tactician.ObstimeTactician(inst)
 dyntac = dsphsim.tactician.DynamicTimeTactician(inst)
 equtac = dsphsim.tactician.EqualTimeTactician(inst)

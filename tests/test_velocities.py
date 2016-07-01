@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """
-Generic python script.
+Test generating the velocity distribution
 """
-__author__ = "Alex Drlica-Wagner"
 
+import os
 import numpy as np
-import pylab as plt
 
 import dsphsim.tactician
 import dsphsim.instruments
@@ -47,48 +46,51 @@ pdf = dwarf.kinematics.interp_pdf(xx,vv)
 cdf = dwarf.kinematics.interp_cdf(xx,vv)
 icdf = dwarf.kinematics.interp_icdf(xx,ii)
 
-plt.figure()
-plt.pcolormesh(a,v,pdf)
-plt.title('PDF')
-plt.colorbar(label='f(v)')
-plt.xlabel('Angular Separation (deg)')
-plt.ylabel('Velocity (km/s)')
-plt.plot(angsep,vel,'o',color='0.5',mec='0.5',markersize=4,alpha=0.5)
-plt.draw()
-plt.xlim(a.min(),a.max())
-plt.ylim(v.min(),v.max())
+if os.environ.get('DISPLAY'):
+    import pylab as plt
 
-# Bins in fraction of the angular extension
-bins = [ (0.0,0.5),
-         (0.5,1.0),
-         (1.0,2.0),
-         (2.0,20.0),
-]
-kwargs = dict(histtype='step',bins=v,lw=2,normed=True)
-plt.figure()
-for (amin,amax) in bins:
-    sel = (angsep > amin*dwarf.extension) & (angsep < amax*dwarf.extension)
-    print sel.sum()
-    plt.hist(vel[sel],label=r'$%g < r/r_h < %g$'%(amin,amax),**kwargs)
-
-plt.legend(loc='upper right')
-plt.xlabel('Velocity (km/s)')
-plt.ylabel('Normalized Counts')
-
-"""
-plt.figure()
-plt.pcolormesh(a,v,cdf)
-plt.colorbar(label=r'Cumulative f(v)')
-plt.title('CDF')
-plt.xlabel('Angular Separation (deg)')
-plt.ylabel('Velocity (km/s)')
-
-plt.figure()
-plt.pcolormesh(a,i,icdf)
-plt.colorbar(label=r'Velocity (km/s)')
-plt.title('iCDF')
-plt.xlabel('Angular Separation (deg)')
-plt.ylabel('Cumulative f(v)')
-"""
-
-plt.ion()
+    plt.figure()
+    plt.pcolormesh(a,v,pdf)
+    plt.title('PDF')
+    plt.colorbar(label='f(v)')
+    plt.xlabel('Angular Separation (deg)')
+    plt.ylabel('Velocity (km/s)')
+    plt.plot(angsep,vel,'o',color='0.5',mec='0.5',markersize=4,alpha=0.5)
+    plt.draw()
+    plt.xlim(a.min(),a.max())
+    plt.ylim(v.min(),v.max())
+     
+    # Bins in fraction of the angular extension
+    bins = [ (0.0,0.5),
+             (0.5,1.0),
+             (1.0,2.0),
+             (2.0,20.0),
+    ]
+    kwargs = dict(histtype='step',bins=v,lw=2,normed=True)
+    plt.figure()
+    for (amin,amax) in bins:
+        sel = (angsep > amin*dwarf.extension) & (angsep < amax*dwarf.extension)
+        print sel.sum()
+        plt.hist(vel[sel],label=r'$%g < r/r_h < %g$'%(amin,amax),**kwargs)
+     
+    plt.legend(loc='upper right')
+    plt.xlabel('Velocity (km/s)')
+    plt.ylabel('Normalized Counts')
+     
+    """
+    plt.figure()
+    plt.pcolormesh(a,v,cdf)
+    plt.colorbar(label=r'Cumulative f(v)')
+    plt.title('CDF')
+    plt.xlabel('Angular Separation (deg)')
+    plt.ylabel('Velocity (km/s)')
+     
+    plt.figure()
+    plt.pcolormesh(a,i,icdf)
+    plt.colorbar(label=r'Velocity (km/s)')
+    plt.title('iCDF')
+    plt.xlabel('Angular Separation (deg)')
+    plt.ylabel('Cumulative f(v)')
+    """
+     
+    plt.ion()
