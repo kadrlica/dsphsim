@@ -1,5 +1,5 @@
 --index-url https://pypi.python.org/simple
 -e .
 
-# Ugalie
+# make sure to grab ugali isochrones
 ugali >= 1.6.0 --install-option="--isochrones"
