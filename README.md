@@ -20,3 +20,4 @@ Supported Instruments
 Installation
 ------------
 
+Installation is not the easiest thing in the world, but you can check out the [.travis.yaml](.travis.yaml).
