@@ -2,4 +2,4 @@
 -e .
 
 # make sure to grab ugali isochrones
-ugali >= 1.6.0 --install-option="--isochrones"
+#ugali >= 1.6.0 --install-option="--isochrones"
