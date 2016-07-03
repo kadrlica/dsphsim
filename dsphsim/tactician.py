@@ -62,7 +62,7 @@ class ObstimeTactician(Tactician):
         snr_thresh = kwargs.get('snr_thresh',self.snr_thresh)
         snr = self.instrument.mag2snr(data['mag'],obstime)
 
-        num = (snr>snr_thresh).sum()
+        num = (np.nan_to_num(snr)>snr_thresh).sum()
         msg = "%s -- ObsTime: %.2f, NStars: %i"%(self.__class__.__name__,obstime,num)
         return snr
 
@@ -81,7 +81,7 @@ class MaglimTactician(Tactician):
         obstime = self.instrument.maglim2exp(maglim,snr_thresh)
         snr = self.instrument.mag2snr(data['mag'],obstime)
 
-        num = (snr>snr_thresh).sum()
+        num = (np.nan_to_num(snr)>snr_thresh).sum()
         msg = "%s -- Maglim: %.2f, ObsTime: %.2f, NStars: %i"%(self.__class__.__name__,maglim,obstime,num)
         logging.debug(msg)
 
@@ -111,7 +111,7 @@ class NStarsTactician(Tactician):
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
         nexp = 1
 
-        num = (snr>snr_thresh).sum()
+        num = (np.nan_to_num(snr)>snr_thresh).sum()
         msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,self.obstime,num)
         logging.debug(msg)
         return snr[np.argsort(sort_idx)]
@@ -144,7 +144,7 @@ class EqualTactician(Tactician):
             delta_time = np.abs(eff_time - new_eff_time)
             eff_time = new_eff_time
 
-            num = (snr>snr_thresh).sum()
+            num = (np.nan_to_num(snr)>snr_thresh).sum()
             i += 1
             msg = "%s -- Niter: %i, NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,i,total_time/eff_time,eff_time,num)
             logging.debug(msg)
@@ -246,7 +246,7 @@ class DynamicTimeTactician(Tactician):
             used_time += eff_time
             nexp = i+1
 
-        num = (snr>0).sum()
+        num = (np.nan_to_num(snr)>0).sum()
         msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,eff_time,num)
         logging.debug(msg)
 
