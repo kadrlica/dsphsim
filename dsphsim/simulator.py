@@ -5,9 +5,11 @@ Simple tool to simulate stellar populations.
 
 import os,sys
 import numpy as np
+import loggging
 
 import scipy.stats as stats
 
+import dsphsim
 from dsphsim.dwarf import Dwarf
 from dsphsim.instruments import factory as instrumentFactory
 from dsphsim.tactician import factory as tacticianFactory
@@ -232,17 +234,14 @@ if __name__ == "__main__":
 
     # Build and configure the tactician (holds the instrument)
     if args.maglim:
-        print 'maglim'
         tact = tacticianFactory('MaglimTactician',instrument=instr,
                                 obstime=None,snr_thresh=args.snr_thresh,
                                 maglim=args.maglim)
     elif args.nstars:
-        print 'nstar'
         tact = tacticianFactory('NStarsTactician',instrument=instr,
                                 obstime=None,snr_thresh=args.snr_thresh,
                                 nstars=args.nstars)
     elif args.exptime:
-        print 'obstime'
         tact = tacticianFactory('ObstimeTactician',instrument=instr,
                                 obstime=args.exptime,snr_thresh=args.snr_thresh)
         
@@ -258,11 +257,13 @@ if __name__ == "__main__":
                 suffix = '_{:0{width}d}'.format(i+1,width=len(str(args.nsims)))
                 outfile = base + suffix + ext
             if os.path.exists(outfile): os.remove(outfile)
-            print("Writing %s..."%outfile)
+            logging.info("Writing %s..."%outfile)
             out = open(outfile,'w',1)
         else:
             out = sys.stdout
 
+        #out.write('# '+os.path.basename(sys.argv[0])+' '+dsphsim.__version__+'\n')
+        #out.write('# '+' '.join(sys.argv[1:]) + '\n')
         out.write('#'+' '.join(['%-9s'%n for n in data.dtype.names])+'\n')
         np.savetxt(out,data,fmt='%-9.5f')
         out.flush()
