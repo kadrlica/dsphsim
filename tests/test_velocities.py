@@ -5,6 +5,7 @@ Test generating the velocity distribution
 
 import os
 import numpy as np
+import logging
 
 import dsphsim.tactician
 import dsphsim.instruments
@@ -15,6 +16,9 @@ from ugali.utils.projector import angsep
 
 np.random.seed(0)
 
+# More verbose output...
+logging.getLogger().setLevel(logging.DEBUG)
+
 kwargs = dict(distance_modulus=17.5,extension=0.1,rs=1.0,richness=1e4,
               kinematics='PhysicalVelocity')
 kwargs.update(vmax=20)
@@ -22,9 +26,14 @@ kwargs.update(vmax=20)
 dwarf = dsphsim.dwarf.Dwarf(**kwargs)
 vdist = dwarf.kinematics
 mag_1, mag_2, lon, lat, vel = dwarf.simulate()
+print "Simulated %s stars"%len(vel)
+
+sel = ~np.isnan(vel)
+lon,lat,vel = lon[sel],lat[sel],vel[sel]
+print "Found %s stars with vel = NaN"%(np.isnan(vel).sum())
+
 angsep = dwarf.kernel.angsep(lon,lat)
 velocities = dwarf.kinematics.velocities
-print "Simulated %s stars"%len(vel)
 
 # Angular separation (deg)
 a = np.linspace(angsep.min(),angsep.max())
