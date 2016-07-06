@@ -94,3 +94,6 @@ if os.environ.get('DISPLAY'):
     """
      
     plt.ion()
+
+if __name__ == "__main__":
+    pass

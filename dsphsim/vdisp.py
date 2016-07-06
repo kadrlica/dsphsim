@@ -141,8 +141,13 @@ def mcmc(vel, vel_err, **kwargs):
     sampler.run_mcmc(starting_guesses, nsteps)
     samples = sampler.chain.reshape(-1,ndim,order='F')
 
-    dtype = [(k,float) for k in PARAMS.keys()]
-    samples = np.rec.fromrecords(samples,names=PARAMS.keys())
+    names = PARAMS.keys()
+    try:
+        from ugali.analysis.mcmc import Samples
+        samples = Samples(samples.T,names=names)
+    except ImportError:
+        # ugali is not installed; use recarray
+        samples = np.rec.fromrecords(samples,names=names)
 
     samples = burn(samples,nburn*nwalkers)
     samples = cull(samples)
