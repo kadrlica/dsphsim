@@ -5,7 +5,7 @@ Simple tool to simulate stellar populations.
 
 import os,sys
 import numpy as np
-import loggging
+import logging
 
 import scipy.stats as stats
 
