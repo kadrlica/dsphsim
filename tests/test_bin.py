@@ -5,10 +5,12 @@ Generic python script.
 __author__ = "Alex Drlica-Wagner"
 import subprocess
 
-if __name__ == "__main__":
-    import argparse
-    description = __doc__
-    parser = argparse.ArgumentParser(description=description)
-    args = parser.parse_args()
+def test_bin():
+    cmd = 'dsphsim'
+    subprocess.check_call(cmd,shell=True)
 
-    subprocess.check_call('dsphsim')
+    cmd = 'dsphsim -v --seed 0 --kinematics=Physical out.txt'
+    subprocess.check_call(cmd,shell=True)
+
+if __name__ == "__main__":
+    test_bin()

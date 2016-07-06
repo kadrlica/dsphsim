@@ -203,6 +203,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = vars(args)
 
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     if args.seed is not None:
         np.random.seed(args.seed)
     
