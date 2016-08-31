@@ -15,31 +15,11 @@ from scipy.optimize import brentq
 # Minimum and maximum magnitudes for instruments
 MAGMIN = 15
 MAGMAX = 27
+EXPMAX = 1e8
 
 def factory(name, **kwargs):
     from ugali.utils.factory import factory
     return factory(name, module=__name__, **kwargs)
-
-### def factory(name, **kwargs):
-###     """
-###     Factory for creating spatial kernels. Arguments
-###     are passed directly to the constructor of the chosen
-###     kernel.
-###     """
-###     fn = lambda member: inspect.isclass(member) and member.__module__==__name__
-###     classes = odict(inspect.getmembers(sys.modules[__name__], fn))
-###     members = odict([(k.lower(),v) for k,v in classes.items()])
-###     
-###     namelower = name.lower()
-###     if namelower not in members.keys():
-###         msg = "%s not found in instruments:\n %s"%(name,classes.keys())
-###         #logger.error(msg)
-###         print msg
-###         msg = "Unrecognized instrument: %s"%name
-###         raise Exception(msg)
-###  
-###     return members[namelower](**kwargs)
-
 
 class Instrument(object):
     """ Base class for various spectroscopic instruments. """
@@ -51,6 +31,9 @@ class Instrument(object):
         ('fov',   50),  # Field of View (arcmin^2)
         ('nstar', 50),  # Number of stars per pointing
     ])
+    MAGMIN=MAGMIN
+    MAGMAX=MAGMAX
+    EXPMAX=EXPMAX
 
     def __init__(self, **kwargs):
         self._setup(**kwargs)
@@ -67,8 +50,8 @@ class Instrument(object):
         
         self.__dict__.update(kwargs)
 
-        self.MAGMIN = MAGMIN
-        self.MAGMAX = MAGMAX
+        #self.MAGMIN = MAGMIN
+        #self.MAGMAX = MAGMAX
 
     @classmethod
     def defaults(cls):
@@ -89,8 +72,8 @@ class Instrument(object):
     def maglim2exp(cls, maglim, snr=5):
         """Convert 5-sigma limiting magnitude into exposure time"""
         f = lambda e,m: cls.mag2snr(m,e) - snr
-        _mag = np.linspace(MAGMIN,MAGMAX,25)
-        _exp = [brentq(f,0,1e8,args=(_m)) for _m in _mag]
+        _mag = np.linspace(cls.MAGMIN,cls.MAGMAX,25)
+        _exp = [brentq(f,0,cls.EXPMAX,args=(_m)) for _m in _mag]
         interp = interp1d(_mag,_exp,bounds_error=False)
         return interp(maglim)
 
@@ -178,7 +161,8 @@ class M2FS(Instrument):
         ('fov',   706.9),
         ('nstar', 256),
     ])
-
+    EXPMAX=1e11
+    
     @classmethod
     def snr2err(cls, snr):
         # This is for M2FS based on Simon et al. 2015

@@ -18,8 +18,8 @@ except ImportError:
     __email__ = 'kadrlica@fnal.gov'
 
 PARAMS = odict([
-    ('mu','$\mu$ (km/s)'),
-    ('sigma','$\sigma$ (km/s)'),
+    ('mu',r'$\mu$ (km/s)'),
+    ('sigma',r'$\sigma$ (km/s)'),
 ])
 
 ###############################################

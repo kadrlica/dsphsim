@@ -230,6 +230,7 @@ if __name__ == "__main__":
                                       vdisp=args.vdisp, vmean=args.vmean,
                                       vmax=args.vmax, rvmax=args.rvmax)
     dwarf.set_kinematics(kinematics)
+    logging.debug(str(dwarf))
 
     # Build and configure the instrument
     instr = instrumentFactory(args.instrument)

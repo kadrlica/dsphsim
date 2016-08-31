@@ -108,6 +108,7 @@ class NStarsTactician(Tactician):
 
         min_exptime = self.instrument.maglim2exp(sort_mag,snr_thresh)
         self.obstime = min_exptime[nstars-1]
+        print self.obstime
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
         nexp = 1
 

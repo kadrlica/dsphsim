@@ -12,6 +12,8 @@
 # Readout amps: 1
 # S/N measured at 8600A 
 # Measurement: SNR/Pixel
+#
+# Extrapolation for mag > 22.5
 #MAG   36000s 10000s 3600s 1000s 360s
 27.0   0.01
 26.0   0.02

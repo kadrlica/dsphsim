@@ -26,7 +26,7 @@ import vegas
 from ugali.analysis.model import Model,Parameter
 
 # Constants and sampling parameters (left over from Fortran)
-nx=200;nes=200;nts=100;nvs=100;nrs=25
+nx=200;nes=200;nts=100;nvs=100;nrs=15
 # Newton's constant in (km^3 Msun^-1 s^-1)
 Gn=6.67e-11*1.99e30*1.e-9 
 # Vegas MCMC integration parameters
@@ -137,13 +137,28 @@ def deriv_rhostar_deriv_Psi(x,y):
 
     Parameters:
     x : Radial distance normalized to NFW scale radius (r/rs)
-    y : Ratio between plummer and NFW scale radius
+    y : Ratio between Plummer half-light radius and NFW scale radius
 
     Returns: 
     dPhi : Derivative of the stellar density with respect to
            the gravitational potential
     """
     return deriv_rhostar(x,y)/deriv_nfw_potential(x)
+
+def rhostar(x,y):
+    """
+    Physical projected (2D) Plummer stellar density.
+    
+    Parameters:
+    x : Radial distance normalized to NFW scale radius (r/rs)
+    y : Ratio between Plummer half-light radius and NFW scale radius
+
+    Returns: 
+    rhostar : 2D projected stellar density
+    """
+    #y = 0.105d0/r0 
+    rhostar = 1.0/(1.0+ x**2/y**2)**2.0 
+    return rhostar
 
 #class VelocityDistribution(object):
 class VelocityDistribution(Model):
@@ -218,9 +233,15 @@ class PhysicalVelocity(VelocityDistribution):
     ])
     
     def _cache(self, name=None):
-        velmin = -1.5 * self.vmax 
-        velmax = 1.5 * self.vmax 
+        velmin = getattr(self,'velmin',-1.5 * self.vmax)
+        velmax = getattr(self,'velmax', 1.5 * self.vmax)
+        #velmin = -1.5 * self.vmax 
+        #velmax = 1.5 * self.vmax 
         self.velocities = np.linspace(velmin,velmax,nvs)
+
+        xmin = getattr(self,'xmin',1e-4)
+        xmax = getattr(self,'xmax',5)
+        self.xvalues = np.logspace(np.log10(xmin),np.log10(xmax),nrs)
 
         self.build_interps()
 
@@ -384,7 +405,7 @@ class PhysicalVelocity(VelocityDistribution):
         Calculate the velocity distribution.
         
         Parameters:
-        radius     : Projected radius (kpc)
+        radius     : Projected radius (in units of the scale radius?)
         velocities : Array of velocity to evalute f(v)
         
         Returns:
@@ -425,7 +446,8 @@ class PhysicalVelocity(VelocityDistribution):
                   [emin,emax],  # velocity
                   [0, 2*np.pi], # eta
         ]
-            
+        self.region = region
+
         @vegas.batchintegrand
         def dfunc(y):
             """
@@ -439,14 +461,18 @@ class PhysicalVelocity(VelocityDistribution):
             """
             y = np.atleast_2d(y)
             t1,vt,eta = y.T
-         
+
             rspline = t1**2 + Rp_in
             Psi_spline = self.interp_psi(rspline)
+
             sel = (emin <= vt) & (vt <= (self.Phis*Psi_spline - 0.5*v_in**2))
          
             val = self.interp_logfe(vt) * (t1**2+Rp_in)/np.sqrt(2*Rp_in+t1**2)
             return np.where(sel,val,0) 
 
+        # For debugging
+        self.dfunc = dfunc
+        # self.dfunc = lambda self,y: return dfunc(y)
 
         # Setup the integrator
         integrator = vegas.Integrator(region)
@@ -454,6 +480,7 @@ class PhysicalVelocity(VelocityDistribution):
         fv_out = []
         for v_in in velocities:
             # burn-in
+            #integrator(dfunc,nitn=5,neval=n_grid)
             integrator(dfunc,nitn=5,neval=n_grid)
             # evaluate
             result = integrator(dfunc,nitn=5,neval=n_final)
@@ -473,10 +500,17 @@ class PhysicalVelocity(VelocityDistribution):
         None : (sets interp_pdf,interp_cdf,interp_icdf)
         """
         xproj = np.atleast_1d(xproj)
-        epsilon = 1e-4
-        xmin = max(np.min(xproj)-epsilon,0)
-        xmax = np.max(xproj)+epsilon
-        xsteps = np.linspace(xmin,xmax,nsteps)
+
+        #epsilon = 1e-4
+        ##xmin =max(np.min(xproj)-epsilon,0)
+        ##xmax = np.max(xproj)+epsilon
+        #xmin = epsilon
+        #xmax = max(np.max(xproj)+epsilon,5)
+        # 
+        ##xsteps = np.linspace(xmin,xmax,nsteps)
+        #xstep = np.logspace(np.log10(xmin),np.log10(xmax),nsteps)
+
+        xsteps = self.xvalues
         vsteps = self.velocities
 
         y,x = np.meshgrid(vsteps,xsteps)
@@ -494,7 +528,9 @@ class PhysicalVelocity(VelocityDistribution):
         u = np.nan_to_num(z/np.sum(z,axis=1)[:,np.newaxis])
         w = np.cumsum(z,axis=1)
         w = np.nan_to_num(w/np.max(w,axis=1)[:,np.newaxis])
-
+        # Clip tiny values to avoid "Triangulation is invalid" error
+        w = np.where(w < 1e-13, 0, w)
+        
         self.x = x
         self.y = y
         self.z = z
@@ -523,6 +559,29 @@ class PhysicalVelocity(VelocityDistribution):
         i = np.random.uniform(size=len(xproj))
         vel = self.interp_icdf(xproj,i).filled(np.nan)
         return vel
+
+    def radial_vdisp(self):
+        if not hasattr(self,'interp_pdf'):
+            self.interp_vdist()
+
+        xproj = self.x
+        vel = self.y
+
+        pdf = self.interp_pdf(xproj,vel)
+
+        sigma_r2 = simps(vel**2 * pdf, vel, axis=1)/simps(pdf, vel, axis=1)
+        return np.sqrt(sigma_r2)
+
+    def avg_vdisp(self):
+        if not hasattr(self,'interp_pdf'):
+            self.interp_vdist()
+
+        xproj = self.x[:,0]
+        sigma_r = self.radial_vdisp()
+        I = rhostar(xproj,y=self.rpl/self.rs)
+        sigma2 = simps(I*sigma_r**2*xproj, xproj)/simps(I*xproj, xproj)
+
+        return np.sqrt(sigma2)
 
 Gaussian = GaussianVelocity
 Physical = PhysicalVelocity
