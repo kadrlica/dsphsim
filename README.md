@@ -6,7 +6,12 @@
 Simulate dwarf galaxies
 =======================
 
-This tool relies on the ultra-faint galaxy likelihood package (ugali) for simulating the spatial and color-magnitude distributions of stars in dwarf galaxies. Ugali is not yet publicly available.
+This tool relies on the [ultra-faint galaxy likelihood package (ugali)](https://github.com/DarkEnergySurvey/ugali) for simulating the spatial and color-magnitude distributions of stars in dwarf galaxies.
+
+Installation
+------------
+
+Installation is not the easiest thing in the world, but you can check out the [travis.yml](.travis.yml).
 
 Supported Instruments
 ---------------------
@@ -16,8 +21,4 @@ Supported Instruments
 * `GIRAFFE` on VLT
 * `AAOmega/2dF` on AAT
 * `M2FS` on Magellan
-
-Installation
-------------
-
-Installation is not the easiest thing in the world, but you can check out the [travis.yml](.travis.yml).
+* `GMACS` for GMT
