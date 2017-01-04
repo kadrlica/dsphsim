@@ -5,6 +5,7 @@ Calculate the mean and dispersion of a data set with errors using MCMC sampling 
 import os
 import warnings
 from collections import OrderedDict as odict
+import logging
 
 import numpy as np
 import emcee
@@ -215,6 +216,8 @@ def parser():
                        help='Make a corner plot')
     group.add_argument('--seed',default=None,type=int,
                        help="Random number seed")
+    group.add_argument('-v','--verbose',action='store_true',
+                       help="Output verbosity")
     group.add_argument('-V','--version',action='version',
                        version='%(prog)s '+__version__,
                        help="Print version and exit")
@@ -243,11 +246,16 @@ def parser():
                        help="Baysian credible pvalue")
     egroup.add_argument('--interval',default=None,type=float,
                        help="Baysian credible interval")
+    group.add_argument('--nsamples',type=int,default=1000,
+                       help="Number of samples for KDE")
     return parser
 
 if __name__ == "__main__":
     p = parser()
     args = p.parse_args()
+
+    level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(format="%(message)s", level=level)
 
     if args.seed is not None: np.random.seed(args.seed)
 
@@ -282,8 +290,8 @@ if __name__ == "__main__":
 
     intervals = []
     for i,name in enumerate(PARAMS):
-        peak,[low,high] = peak_interval(samples[name],alpha=alpha)
-        print "%-05s : %.2f [%.2f,%.2f]"%(name,peak,low,high)
+        peak,[low,high] = peak_interval(samples[name],alpha=alpha,samples=args.nsamples)
+        print "%-05s : [%.2f, [%.2f,%.2f]]"%(name,peak,low,high)
         intervals.append([low,high])
 
     if args.plot:
