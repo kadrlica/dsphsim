@@ -14,6 +14,8 @@ from dsphsim.dwarf import Dwarf
 from dsphsim.instruments import factory as instrumentFactory
 from dsphsim.tactician import factory as tacticianFactory
 
+from ugali.utils.projector import dist2mod, mod2dist
+
 def randerr(size=1,func='normal',**kwargs):
     """ Return a sample from a random variate. """
     kwargs.update(size=size)
@@ -141,19 +143,18 @@ class Simulator(object):
         group.add_argument('--vmean',type=float,default=60.,
                             help='mean systemic velocity (km/s)')
         # should be mutually exclusive with vmax and rs
-        egroup = group.add_mutually_exclusive_group()
-        egroup.add_argument('--vdisp',type=float,default=3.3,
+        egroup1 = group.add_mutually_exclusive_group()
+        egroup2 = group.add_mutually_exclusive_group()
+        egroup1.add_argument('--vdisp',type=float,default=3.3,
                             help='gaussian velocity dispersion (km/s)')
-        egroup.add_argument('--vmax',type=float,default=10.0,
-                            help='maximum circular velocity (km/s)')
-        egroup.add_argument('--rhos',type=float,default=None,
-                            help='maximum circular velocity (Msun/pc^3)')
-        egroup = group.add_mutually_exclusive_group()
-        egroup.add_argument('--rvmax',type=float,default=0.4,
+        egroup2.add_argument('--rvmax',type=float,default=0.4,
                            help='radius of max circular velocity (kpc)')
-        # ADW: it would be nice to remove this or
-        egroup.add_argument('--rs',type=float,default=None,
+        egroup1.add_argument('--vmax',type=float,default=10.0,
+                            help='maximum circular velocity (km/s)')
+        egroup2.add_argument('--rs',type=float,default=None,
                            help='scale radius for NFW halo (kpc)')
+        egroup1.add_argument('--rhos',type=float,default=None,
+                            help='scale density for NFW halo (Msun/pc^3)')
          
         group = parser.add_argument_group('Isochrone')
         group.add_argument('--isochrone',type=str,default='Bressan2012',
@@ -162,8 +163,11 @@ class Simulator(object):
                            help='age of stellar population (Gyr)')
         group.add_argument('--metallicity',type=float,default=2e-4,
                            help='metallicity of stellar population')
-        group.add_argument('--distance_modulus',type=float,default=17.5,
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--distance_modulus','--modulus',type=float,default=17.5,
                             help='distance modulus')
+        egroup.add_argument('--distance',type=float,default=None,
+                            help='distance (kpc)')
          
         group = parser.add_argument_group('Kernel')
         group.add_argument('--kernel',type=str,default='EllipticalPlummer',
@@ -172,8 +176,11 @@ class Simulator(object):
                            help='centroid right acension (deg)')
         group.add_argument('--dec',type=float,default=-54.0,
                            help='centroid declination (deg)')
-        group.add_argument('--extension',type=float,default=0.1,
-                           help='projected half-light radius (deg)')
+        egroup = group.add_mutually_exclusive_group()
+        egroup.add_argument('--extension',type=float,default=0.1,
+                            help='projected angular half-light radius (deg)')
+        egroup.add_argument('--rhalf',type=float,default=None,
+                            help='projected physical half-light radius (kpc)')
         group.add_argument('--ellipticity',type=float,default=0.0,
                            help='spatial extension (deg)')
         group.add_argument('--position_angle',type=float,default=0.0,
@@ -186,30 +193,59 @@ class Simulator(object):
                            help='systematic velocity error (km/s)')
 
         group = parser.add_argument_group('Tactician')
+        group.add_argument('--tactician',default=None,
+                           help='observation tactician')
+        group.add_argument('--snr_thresh',default=5,type=float,
+                           help='signal-to-noise threshold')
         egroup = group.add_mutually_exclusive_group()
-        egroup.add_argument('--exptime',default=3600.,type=float,
-                            help='Exposure time (s)')
+        egroup.add_argument('--obstime','--exptime',default=3600.,type=float,
+                            help='total observation time (s)')
         egroup.add_argument('--maglim',default=None,type=float,
                             help='limiting magnitude (given snr-thresh)')
         egroup.add_argument('--nstars',default=None,type=int,
                             help='number of stars (given snr-thresh)')
-        group.add_argument('--snr-thresh',default=5,type=float,
-                           help='signal-to-noise threshold')
         
         return parser
-    
+
+    @classmethod
+    def parse_args(cls, parser=None):
+        """
+        Resolve mutually exclusive arguments.
+        """
+        if parser is None: parser = cls.parser()
+        args = parser.parse_args()
+     
+        if args.verbose:
+            logging.getLogger().setLevel(logging.DEBUG)
+        if args.seed is not None:
+            np.random.seed(args.seed)
+
+        # Convert halo parameters
+        if args.rs is not None: 
+            args.rvmax = PhysicalVelocity.rs2rvmax(rs)
+            #args.rvmax = 2.163*args.rs
+
+        if args.rhos is not None: 
+            #raise Exception('Not implemented')
+            rs = PhysicalVelocity.rvmax2rs(args.rvmax)
+            args.vmax = PhysicalVelocity.rhos2vmax(args.rhos,rs)
+
+        # Convert physical parameters
+        if args.distance is not None:
+            args.distance_modulus = dist2mod(args.distance)
+        if args.rhalf is not None:
+            distance = mod2dist(args.distance_modulus)
+            args.extension = np.degrees(np.arctan(args.rhalf/distance))
+     
+        return args
+
 if __name__ == "__main__":
-    parser = Simulator.parser()
-    args = parser.parse_args()
-    kwargs = vars(args)
+    #parser = Simulator.parser()
+    #args = parser.parse_args()
+    #kwargs = vars(args)
+    args = Simulator.parse_args()
 
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    if args.seed is not None:
-        np.random.seed(args.seed)
-    
-
+    #logging.debug('%(prog)s %(version)s'
     dwarf = Dwarf()
     isochrone=Dwarf.createIsochrone(name=args.isochrone, age=args.age,
                                     metallicity=args.metallicity,
@@ -224,31 +260,28 @@ if __name__ == "__main__":
     dwarf.richness = args.stellar_mass/dwarf.isochrone.stellar_mass()
 
     # Set the kinematic properties
-    if args.rs is not None: args.rvmax = 2.163*args.rs
-    if args.rhos is not None: raise Exception('Not implemented')
+    #if args.rs is not None: args.rvmax = 2.163*args.rs
+    #if args.rhos is not None: raise Exception('Not implemented')
     kinematics=Dwarf.createKinematics(name=args.kinematics, 
                                       vdisp=args.vdisp, vmean=args.vmean,
                                       vmax=args.vmax, rvmax=args.rvmax)
     dwarf.set_kinematics(kinematics)
-    logging.debug(str(dwarf))
+    logging.debug('\n'+str(dwarf))
 
     # Build and configure the instrument
     instr = instrumentFactory(args.instrument)
     if args.vsys is not None: instr.vsys = args.vsys
 
     # Build and configure the tactician (holds the instrument)
-    if args.maglim:
-        tact = tacticianFactory('MaglimTactician',instrument=instr,
-                                obstime=None,snr_thresh=args.snr_thresh,
-                                maglim=args.maglim)
-    elif args.nstars:
-        tact = tacticianFactory('NStarsTactician',instrument=instr,
-                                obstime=None,snr_thresh=args.snr_thresh,
-                                nstars=args.nstars)
-    elif args.exptime:
-        tact = tacticianFactory('ObstimeTactician',instrument=instr,
-                                obstime=args.exptime,snr_thresh=args.snr_thresh)
-        
+    if not args.tactician:
+        if args.maglim:    args.tactician = 'MaglimTactician'
+        elif args.nstars:  args.tactician = 'NStarsTactician'
+        elif args.obstime: args.tactician = 'ObstimeTactician'
+    tact_kwargs = dict(obstime=args.obstime,snr_thresh=args.snr_thresh,
+                       maglim=args.maglim,nstars=args.nstars)
+    tact = tacticianFactory(args.tactician,instrument=instr,**tact_kwargs)
+    logging.debug('\n'+str(tact))
+                               
     for i in range(args.nsims):
         # Run the simulation
         data = Simulator.simulate(dwarf,tact)
