@@ -32,7 +32,7 @@ def test_vdisp():
      
     peaks = []
     for i in range(10):
-        samples = dsphsim.vdisp.mcmc(data['VTRUE'],data['VERR'])
+        samples,sampler = dsphsim.vdisp.mcmc(data['VTRUE'],data['VERR'])
         peaks.append(dsphsim.vdisp.kde_peak(samples['sigma']))
         print peaks[-1]
      
