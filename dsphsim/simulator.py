@@ -13,6 +13,7 @@ import dsphsim
 from dsphsim.dwarf import Dwarf
 from dsphsim.instruments import factory as instrumentFactory
 from dsphsim.tactician import factory as tacticianFactory
+from dsphsim.velocity import PhysicalVelocity
 
 from ugali.utils.projector import dist2mod, mod2dist
 
@@ -222,7 +223,7 @@ class Simulator(object):
 
         # Convert halo parameters
         if args.rs is not None: 
-            args.rvmax = PhysicalVelocity.rs2rvmax(rs)
+            args.rvmax = PhysicalVelocity.rs2rvmax(args.rs)
             #args.rvmax = 2.163*args.rs
 
         if args.rhos is not None: 
