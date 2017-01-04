@@ -27,9 +27,10 @@ class Instrument(object):
     _filename = 'inst.dat'
     _exptime0 = 36000.
     _defaults = odict([
-        ('vsys' , 2.0), # Systematic eror (km/s)
-        ('fov',   50),  # Field of View (arcmin^2)
-        ('nstar', 50),  # Number of stars per pointing
+        ('vsys' , 2.0),    # Systematic eror (km/s)
+        ('fov',   50),     # Field of View (arcmin^2)
+        ('nstar', 50),     # Number of stars per pointing
+        ('overhead', 30),  # Overhead per exposure (s)
     ])
     MAGMIN=MAGMIN
     MAGMAX=MAGMAX
@@ -99,7 +100,8 @@ class GMACS(Instrument):
         ('vsys',2.0),
         ('fov', 50),
         ('nstar', 50),
-    ])
+        ('overhead', 30),
+   ])
 
     @classmethod
     def snr2err(cls, snr):
@@ -121,6 +123,7 @@ class IMACS(Instrument):
         ('vsys',1.5),
         ('fov', 239),
         ('nstar', 50),
+        ('overhead', 30),
     ])
 
     @classmethod
@@ -140,6 +143,7 @@ class DEIMOS(Instrument):
         ('vsys',  2.0),
         ('fov',   83.5),
         ('nstar', 40),
+        ('overhead', 30),
     ])
 
     @classmethod
@@ -160,6 +164,7 @@ class M2FS(Instrument):
         ('vsys',  0.9),
         ('fov',   706.9),
         ('nstar', 256),
+        ('overhead', 30),
     ])
     EXPMAX=1e11
     
@@ -181,6 +186,7 @@ class GIRAFFE(Instrument):
         ('vsys',0.5),
         ('fov',0.136),
         ('nstar',132),
+        ('overhead', 30),
     ])
 
     @classmethod
@@ -198,6 +204,7 @@ class AAOmega(Instrument):
         ('vsys',0.9),
         ('fov', 3600.0),
         ('nstar',400),
+        ('overhead', 30),
     ])
 
     @classmethod
