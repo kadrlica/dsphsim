@@ -21,20 +21,35 @@ class Tactician(object):
     _defaults = odict([
         ('obstime',3600),  # Observation time (s)
         ('snr_thresh',5),  # Signal-to-noise threshold
+        ('maglim',None),
+        ('nstars',None),
     ])
 
     def __init__(self, instrument, **kwargs):
+        self.name = self.__class__.__name__
         if isinstance(instrument,basestring):
             self.instrument = instrumentFactory(instrument)
         else:
             self.instrument = instrument
         self._setup(**kwargs)
 
+    def __str__(self,indent=0):
+        ret = '{0:>{2}}{1}'.format('',self.name,indent)
+        ret += '\n{0:>{2}}{1}'.format('','Parameters:',indent+2)
+        params = self.defaults().keys()
+        width = len(max(params,key=len))
+        for key in params:
+            value = getattr(self,key)
+            par = '{0!s:{width}} : {1!r}'.format(key,value,width=width)
+            ret += '\n{0:>{2}}{1}'.format('',par,indent+4)
+        return ret
+        
+
     def _setup(self,**kwargs):
         defaults = self.defaults()
         for k,v in kwargs.items():
             if k not in defaults:
-                msg = "Keyword argument not found in defaults"
+                msg = "Keyword argument not found in defaults: %s"%k
                 raise KeyError(msg)
 
         for k,v in defaults.items():
@@ -108,7 +123,7 @@ class NStarsTactician(Tactician):
 
         min_exptime = self.instrument.maglim2exp(sort_mag,snr_thresh)
         self.obstime = min_exptime[nstars-1]
-        print self.obstime
+
         snr = self.instrument.mag2snr(sort_mag,self.obstime)
         nexp = 1
 
@@ -206,14 +221,13 @@ class EqualTimeTactician(Tactician):
         return snr[np.argsort(sort_idx)]
 
 class DynamicTimeTactician(Tactician): 
-    """Maximize the number of stars with S/N > 5
+    """Maximize the number of stars above the SNR threshold. Overheads
+    are added as a constant term for each exposure.
 
     1) Calculate the amount of time necessary to reach S/N = 5 for each star
     2) Group stars by brightness
     3) Expose each group long enough to get faintest star at S/N = 5
     4) Work from brightest group to faintest until out of time
-
-    This algorithm does not deal with overheads, which will be constant per exposure.
     """
     def schedule(self, data, **kwargs):
         obstime    = kwargs.get('obstime',self.obstime)
@@ -222,23 +236,26 @@ class DynamicTimeTactician(Tactician):
         mags = data['mag']
 
         nstar = self.instrument.nstar
+        overhead = self.instrument.overhead
 
         sort_idx = np.argsort(mags)
         sort_mag = mags[sort_idx]
         num = len(sort_mag)
 
+        # Exposure time to reach S/N limit for each star
         min_exptime = self.instrument.maglim2exp(sort_mag)
         snr = np.zeros_like(sort_mag)
 
         used_time = 0
         for i in range(int(num/nstar)+1):
+            # Out of time
             if used_time >= obstime: break
 
             imin = i*nstar
             imax = (i+1)*nstar if (i+1)*nstar < num else num-1
 
-            eff_time = min_exptime[imax]
-
+            eff_time = min_exptime[imax] + overhead
+            
             # Last exposure...
             if obstime < (used_time+eff_time):
                 eff_time = obstime - used_time
@@ -247,9 +264,9 @@ class DynamicTimeTactician(Tactician):
             used_time += eff_time
             nexp = i+1
 
-        num = (np.nan_to_num(snr)>0).sum()
-        msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.__class__.__name__,nexp,eff_time,num)
-        logging.debug(msg)
+            ndetect = (np.nan_to_num(snr)>0).sum()
+            msg = "%s -- NExp: %i, ExpTime: %.2f, NStars: %i"%(self.name,nexp,eff_time,ndetect)
+            logging.debug(msg)
 
         return snr[np.argsort(sort_idx)]
 
