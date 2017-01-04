@@ -6,7 +6,7 @@
 Simulate dwarf galaxies
 =======================
 
-This tool relies on the [ultra-faint galaxy likelihood package (ugali)](https://github.com/DarkEnergySurvey/ugali) for simulating the spatial and color-magnitude distributions of stars in dwarf galaxies.
+This tool relies on the [Ultra-faint Galaxy Likelihood (ugali)](https://github.com/DarkEnergySurvey/ugali) toolkit for simulating the spatial and color-magnitude distributions of stars in dwarf galaxies. Stellar velocities are simulated In addition, it implements a numerical integration of the Eddington equation to 
 
 Installation
 ------------
