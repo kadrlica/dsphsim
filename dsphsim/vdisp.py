@@ -133,13 +133,20 @@ def mcmc(vel, vel_err, **kwargs):
         sel = np.isfinite(vel) & np.isfinite(vel_err)
         vel,vel_err = vel[sel], vel_err[sel]
 
-    mu = np.random.normal(np.mean(vel), scale=1, size=(nwalkers))
-    sigma = np.random.normal(np.std(vel), scale=1, size=(nwalkers))
+    mean, std = np.mean(vel), np.std(vel)
+    mu = np.random.normal(mean, scale=std, size=(nwalkers))
+    sigma = np.random.normal(std, scale=1, size=(nwalkers))
     starting_guesses = np.vstack([mu,sigma]).T
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, 
                                     args=[vel,vel_err], threads=nthreads)
-    sampler.run_mcmc(starting_guesses, nsteps)
+
+    # Burn the requested number of steps
+
+    pos,prob,state = sampler.run_mcmc(starting_guesses,nburn)
+    sampler.reset()
+
+    sampler.run_mcmc(pos,nsteps,state,prob)
     samples = sampler.chain.reshape(-1,ndim,order='F')
 
     names = PARAMS.keys()
@@ -150,11 +157,11 @@ def mcmc(vel, vel_err, **kwargs):
         # ugali is not installed; use recarray
         samples = np.rec.fromrecords(samples,names=names)
 
-    samples = burn(samples,nburn*nwalkers)
+    #samples = burn(samples,nburn*nwalkers)
     samples = cull(samples)
 
     np.seterr(**nperr)
-    return samples
+    return samples, sampler
 
 def burn(samples,nburn):
     """
@@ -181,7 +188,7 @@ def clip(samples,nsigma=4):
         sel &= ((samples[n]>=cmin)&(samples[n]<=cmax))
     return samples[sel]
 
-def plot(samples,intervals=None,sigma_clip=None):
+def plot(samples,intervals=None,sigma_clip=None,labels=PARAMS.values()):
     """ Create the corner plot (with some tweaking). """
     import corner
 
@@ -192,7 +199,7 @@ def plot(samples,intervals=None,sigma_clip=None):
     else:
         samples = samples.view((float,len(names)))
 
-    figure = corner.corner(samples,labels=PARAMS.values())
+    figure = corner.corner(samples,labels=labels)
     axes = figure.get_axes()    
 
     if intervals:
@@ -221,6 +228,8 @@ def parser():
     group.add_argument('-V','--version',action='version',
                        version='%(prog)s '+__version__,
                        help="Print version and exit")
+    group.add_argument('-v','--verbose',action='store_true',
+                       help="Output verbosity")
 
     group = parser.add_argument_group('Data Arguments')
     group.add_argument('--vel',default='VMEAS',
@@ -241,6 +250,8 @@ def parser():
                        help="Number of initial steps*walkers to burn")
     group.add_argument('--nsteps',type=int,default=5000,
                        help="Number of steps per walker")
+
+    group = parser.add_argument_group("Interval Arguments")
     egroup = group.add_mutually_exclusive_group()
     egroup.add_argument('--alpha',default=0.32,type=float,
                        help="Baysian credible pvalue")
@@ -282,7 +293,7 @@ if __name__ == "__main__":
 
     kwargs = dict(nwalkers=args.nwalkers,nburn=args.nburn,
                   nsteps=args.nsteps,nthreads=args.nthreads)
-    samples = mcmc(vel,velerr,**kwargs)
+    samples,sampler = mcmc(vel,velerr,**kwargs)
     
     mean,std = scipy.stats.norm.fit(vel)
     print '%-05s : %.2f'%('mean',mean)
@@ -291,7 +302,7 @@ if __name__ == "__main__":
     intervals = []
     for i,name in enumerate(PARAMS):
         peak,[low,high] = peak_interval(samples[name],alpha=alpha,samples=args.nsamples)
-        print "%-05s : [%.2f, [%.2f,%.2f]]"%(name,peak,low,high)
+        print "%-05s : %.2f [%.2f,%.2f]"%(name,peak,low,high)
         intervals.append([low,high])
 
     if args.plot:
