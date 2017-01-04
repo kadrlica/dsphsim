@@ -26,7 +26,7 @@ import vegas
 from ugali.analysis.model import Model,Parameter
 
 # Constants and sampling parameters (left over from Fortran)
-nx=200;nes=200;nts=100;nvs=100;nrs=15
+nx=200;nes=200;nts=100;nvs=100;nrs=25
 # Newton's constant in (km^3 Msun^-1 s^-1)
 Gn=6.67e-11*1.99e30*1.e-9 
 # Vegas MCMC integration parameters
@@ -416,7 +416,7 @@ class PhysicalVelocity(VelocityDistribution):
             msg = "'radius' must be scalar (at least for now)"
             raise Exception(msg)
         
-        # Projected radius
+        # Projected scale(?) radius
         Rp_in = radius
 
         # Calculate the max radius for this velocity. 
