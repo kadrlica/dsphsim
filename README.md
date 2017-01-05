@@ -22,3 +22,32 @@ Supported Instruments
 * `AAOmega/2dF` on AAT
 * `M2FS` on Magellan
 * `GMACS` for GMT
+
+Output Column Descriptions
+---------------------------
+
+The output of the `dsphsim` executable is an ascii table with the following columns.
+
+| Column | Unit | Description | 
+| ------ | ---- | ----------- |
+| RA | deg | Right ascension |
+| DEC | deg | Declination |
+| MAG_G | mag | DES g-band magnitude | 
+| MAG_I | mag | DES i-band magnitude |
+| ANGSEP | deg | Angular separtion from dwarf centroid |
+| RPROJ | kpc | Projected radial separation from dwarf centroid |
+| SNR |  | Simulated signal-to-noise ratio for spectroscopy |
+| VTRUE | km/s | True simulated velocity |
+| VSTAT | km/s | Adjustment to true velocity from statistical uncertainty |
+| VSYS | km/s | Adjustment to true velocity from systematic uncertainty |
+| VMEAS | km/s | Velocity measured by instrument <br/> VMEAS = VTRUE+VSTAT+VSYS |
+| VMEASERR | km/s | Measured statistical velocity error |
+| VSYSERR | km/s | Assumed instrumental systematic velocity error |
+| VERR | km/s | Quadrature sum of VMEASERR and VSYSERR <br/> VERR = sqrt(VMEASERR<sup>2</sup>+VSYSERR<sup>2</sup>)|
+
+This table can be read into a `numpy` array using [`numpy.genfromtxt`](https://docs.scipy.org/doc/numpy/reference/generated/numpy.genfromtxt.html):
+```
+import numpy as np
+filename = "<your_filename.dat>"
+data = np.genfromtxt(filename,names=True,dtype=None)
+```
