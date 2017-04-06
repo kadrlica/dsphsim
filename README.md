@@ -22,3 +22,4 @@ Supported Instruments
 * `AAOmega/2dF` on AAT
 * `M2FS` on Magellan
 * `GMACS` for GMT
+
