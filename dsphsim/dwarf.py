@@ -88,6 +88,23 @@ class Dwarf(Source):
     def distance(self):
         return self.isochrone.distance
 
+    @property
+    def absolute_magnitude(self):
+        return self.isochrone.absolute_magnitude(self.richness)
+
+    @property
+    def stellar_luminosity(self):
+        return self.richness * self.isochrone.stellarLuminosity()
+
+    @property
+    def stellar_mass(self):
+        return self.richness * self.isochrone.stellarMass()
+
+    @property
+    def rhalf(self):
+        rh = self.extension * np.sqrt(1-self.ellipticity)
+        return self.distance * np.tan(np.radians(rh))
+
 
 if __name__ == "__main__":
     import argparse
