@@ -100,7 +100,7 @@ class GMACS(Instrument):
         ('vsys',2.0),
         ('fov', 50),
         ('nstar', 50),
-        ('overhead', 30),
+        ('overhead', 80),
    ])
 
     @classmethod
@@ -114,6 +114,7 @@ class GMACS(Instrument):
 class IMACS(Instrument):
     """Inamori-Magellan Areal Camera & Spectrograph (IMACS)
     http://www.lco.cl/telescopes-information/magellan/instruments/imacs/imacs-specs
+    http://instrumentation.obs.carnegiescience.edu/ccd/imacs/ccd.html
 
     Assume a systematic floor of 1.5 km/s
     """
@@ -123,7 +124,7 @@ class IMACS(Instrument):
         ('vsys',1.5),
         ('fov', 239),
         ('nstar', 50),
-        ('overhead', 30),
+        ('overhead', 80),
     ])
 
     @classmethod
@@ -136,6 +137,7 @@ class IMACS(Instrument):
 class DEIMOS(Instrument):
     """DEep Imaging Multi-Object Spectrograph (DEIMOS)
     http://www2.keck.hawaii.edu/inst/deimos/specs.html
+    https://www2.keck.hawaii.edu/inst/deimos/primer.html
     """
 
     _filename = 'deimos_i.dat'
@@ -143,7 +145,7 @@ class DEIMOS(Instrument):
         ('vsys',  2.0),
         ('fov',   83.5),
         ('nstar', 40),
-        ('overhead', 30),
+        ('overhead', 80),
     ])
 
     @classmethod
