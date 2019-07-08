@@ -21,7 +21,7 @@ class Dwarf(Source):
     properties of the stars in a dwarf galaxy. """
 
     _defaults = odict(
-        Source._defaults.items() + 
+        list(Source._defaults.items()) + 
         [
             ('kinematics' , dict(name='GaussianVelocity')),
         ])
@@ -35,7 +35,8 @@ class Dwarf(Source):
 
     def simulate(self):
         stellar_mass = self.richness * self.isochrone.stellar_mass()
-        mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
+        #mag_1, mag_2 = self.isochrone.simulate(stellar_mass,mass_steps=1e4)
+        mag_1, mag_2 = self.isochrone.simulate(stellar_mass)
         lon, lat     = self.kernel.simulate(len(mag_1))
 
         # Physical projected radius

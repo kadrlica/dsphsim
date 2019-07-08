@@ -86,7 +86,7 @@ class MaglimTactician(Tactician):
     time and applies that exposure time to every star.
 
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('maglim',24.)]
     )
 
@@ -108,7 +108,7 @@ class NStarsTactician(Tactician):
 
     WARNING: May not deal with saturated stars as expected...
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('nstars',25)]
     )
 
@@ -177,7 +177,7 @@ class EqualTimeTactician(Tactician):
     constant per exposure.
 
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('max_nexp',np.inf)]
     )
 
