@@ -140,6 +140,7 @@ class Simulator(object):
 
         group = parser.add_argument_group('Kinematic')
         group.add_argument('--kinematics',type=str,default='Gaussian',
+                           choices = ['Gaussian', 'Physical'],
                            help='kinematic distribution function')
         group.add_argument('--vmean',type=float,default=60.,
                             help='mean systemic velocity (km/s)')
