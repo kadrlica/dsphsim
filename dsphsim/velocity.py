@@ -388,9 +388,12 @@ class PhysicalVelocity(VelocityDistribution):
         def fb(e, emax=emax):
             return np.where(e >= emax, 0, self.interp_inte(e))
 
+        # Fortran was iterating to nes-2
         temp_int = derivative(fb,energy[:-2],1e-4)
         temp_int[0] = 0
-         
+        # Make the array the same size as energy
+        temp_int = np.append(temp_int, [np.nan, np.nan])
+
         logfe_temp = np.array(temp_int)
         kcut       = ~np.isnan(logfe_temp)
         energy_cut = self.Phis*energy[kcut]

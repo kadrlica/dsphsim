@@ -129,7 +129,7 @@ def mcmc(vel, vel_err, **kwargs):
     nthreads = kwargs.get('nthreads',1)  # number of threads
 
     if not np.all(np.isfinite([vel,vel_err])):
-        print "WARNING: Non-finite value found in data"
+        print("WARNING: Non-finite value found in data")
         sel = np.isfinite(vel) & np.isfinite(vel_err)
         vel,vel_err = vel[sel], vel_err[sel]
 
@@ -142,14 +142,18 @@ def mcmc(vel, vel_err, **kwargs):
                                     args=[vel,vel_err], threads=nthreads)
 
     # Burn the requested number of steps
+    if int(emcee.__version__[0]) >= 3:
+        state = sampler.run_mcmc(starting_guesses,nburn)
+        sampler.reset()
+        sampler.run_mcmc(state,nsteps)
+    else:
+        pos,prob,state = sampler.run_mcmc(starting_guesses,nburn)
+        sampler.reset()
+        sampler.run_mcmc(pos,nsteps,state,prob)
 
-    pos,prob,state = sampler.run_mcmc(starting_guesses,nburn)
-    sampler.reset()
-
-    sampler.run_mcmc(pos,nsteps,state,prob)
     samples = sampler.chain.reshape(-1,ndim,order='F')
 
-    names = PARAMS.keys()
+    names = list(PARAMS.keys())
     try:
         from ugali.analysis.mcmc import Samples
         samples = Samples(samples.T,names=names)
@@ -223,8 +227,6 @@ def parser():
                        help='Make a corner plot')
     group.add_argument('--seed',default=None,type=int,
                        help="Random number seed")
-    group.add_argument('-v','--verbose',action='store_true',
-                       help="Output verbosity")
     group.add_argument('-V','--version',action='version',
                        version='%(prog)s '+__version__,
                        help="Print version and exit")
@@ -296,13 +298,13 @@ if __name__ == "__main__":
     samples,sampler = mcmc(vel,velerr,**kwargs)
     
     mean,std = scipy.stats.norm.fit(vel)
-    print '%-05s : %.2f'%('mean',mean)
-    print '%-05s : %.2f'%('std',std)
+    print('%-05s : %.2f'%('mean',mean))
+    print('%-05s : %.2f'%('std',std))
 
     intervals = []
     for i,name in enumerate(PARAMS):
         peak,[low,high] = peak_interval(samples[name],alpha=alpha,samples=args.nsamples)
-        print "%-05s : %.2f [%.2f,%.2f]"%(name,peak,low,high)
+        print("%-05s : %.2f [%.2f,%.2f]"%(name,peak,low,high))
         intervals.append([low,high])
 
     if args.plot:

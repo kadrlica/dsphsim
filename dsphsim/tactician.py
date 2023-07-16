@@ -16,6 +16,11 @@ def factory(name, **kwargs):
     from ugali.utils.factory import factory
     return factory(name, module=__name__, **kwargs)
 
+def isstring(obj):
+    """Python 2/3 compatible string check"""
+    import six
+    return isinstance(obj, six.string_types)
+
 class Tactician(object):
     """ Base class for observation tactician. """
     _defaults = odict([
@@ -27,7 +32,7 @@ class Tactician(object):
 
     def __init__(self, instrument, **kwargs):
         self.name = self.__class__.__name__
-        if isinstance(instrument,basestring):
+        if isstring(instrument):
             self.instrument = instrumentFactory(instrument)
         else:
             self.instrument = instrument

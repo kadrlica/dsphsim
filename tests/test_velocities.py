@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Test generating the velocity distribution
+Test generating the velocity distribution.
 """
 
 import os
@@ -27,11 +27,11 @@ def test_velocities():
     dwarf = dsphsim.dwarf.Dwarf(**kwargs)
     vdist = dwarf.kinematics
     mag_1, mag_2, lon, lat, vel = dwarf.simulate()
-    print "Simulated %s stars"%len(vel)
+    print("Simulated %s stars"%len(vel))
      
     sel = ~np.isnan(vel)
     lon,lat,vel = lon[sel],lat[sel],vel[sel]
-    print "Found %s stars with vel = NaN"%(np.isnan(vel).sum())
+    print("Found %s stars with vel = NaN"%(np.isnan(vel).sum()))
      
     angsep = dwarf.kernel.angsep(lon,lat)
     velocities = dwarf.kinematics.velocities
@@ -76,11 +76,11 @@ def test_velocities():
                  (1.0,2.0),
                  (2.0,20.0),
         ]
-        kwargs = dict(histtype='step',bins=v,lw=2,normed=True)
+        kwargs = dict(histtype='step',bins=v,lw=2,density=True)
         plt.figure()
         for (amin,amax) in bins:
             sel = (angsep > amin*dwarf.extension) & (angsep < amax*dwarf.extension)
-            print sel.sum()
+            print(sel.sum())
             plt.hist(vel[sel],label=r'$%g < r/r_h < %g$'%(amin,amax),**kwargs)
          
         plt.legend(loc='upper right')

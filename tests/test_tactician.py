@@ -32,7 +32,7 @@ def test_tactician():
      
     x,y,z,w = [],[],[],[]
     for obstime in times:
-        print "Observation time: %s"%obstime
+        print("Observation time: %s"%obstime)
         x += [obstac.schedule(data,obstime=obstime)]
         y += [dyntac.schedule(data,obstime=obstime)]
         z += [equtac.schedule(data,obstime=obstime)]
