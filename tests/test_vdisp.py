@@ -34,7 +34,7 @@ def test_vdisp():
     for i in range(10):
         samples,sampler = dsphsim.vdisp.mcmc(data['VTRUE'],data['VERR'])
         peaks.append(dsphsim.vdisp.kde_peak(samples['sigma']))
-        print peaks[-1]
+        print(peaks[-1])
      
     assert np.allclose(peaks,3.3,atol=0.1)
 
