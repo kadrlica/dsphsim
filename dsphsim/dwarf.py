@@ -35,7 +35,7 @@ class Dwarf(Source):
 
     def simulate(self):
         stellar_mass = self.richness * self.isochrone.stellar_mass()
-        mag_1, mag_2 = self.isochrone.simulate(stellar_mass,steps=1e4)
+        mag_1, mag_2 = self.isochrone.simulate(stellar_mass)
         lon, lat     = self.kernel.simulate(len(mag_1))
 
         # Physical projected radius

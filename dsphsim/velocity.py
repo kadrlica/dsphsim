@@ -21,7 +21,10 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 import matplotlib.tri as mtri
 
-import vegas
+try: 
+    import vegas
+except ImportError:
+    msg = "Vegas not found; velocity calculation disabled"
 
 from ugali.analysis.model import Model,Parameter
 
