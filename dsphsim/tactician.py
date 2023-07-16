@@ -16,6 +16,11 @@ def factory(name, **kwargs):
     from ugali.utils.factory import factory
     return factory(name, module=__name__, **kwargs)
 
+def isstring(obj):
+    """Python 2/3 compatible string check"""
+    import six
+    return isinstance(obj, six.string_types)
+
 class Tactician(object):
     """ Base class for observation tactician. """
     _defaults = odict([
@@ -27,7 +32,7 @@ class Tactician(object):
 
     def __init__(self, instrument, **kwargs):
         self.name = self.__class__.__name__
-        if isinstance(instrument,basestring):
+        if isstring(instrument):
             self.instrument = instrumentFactory(instrument)
         else:
             self.instrument = instrument
@@ -86,7 +91,7 @@ class MaglimTactician(Tactician):
     time and applies that exposure time to every star.
 
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('maglim',24.)]
     )
 
@@ -108,7 +113,7 @@ class NStarsTactician(Tactician):
 
     WARNING: May not deal with saturated stars as expected...
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('nstars',25)]
     )
 
@@ -177,7 +182,7 @@ class EqualTimeTactician(Tactician):
     constant per exposure.
 
     """
-    _defaults = odict(Tactician._defaults.items() +
+    _defaults = odict(list(Tactician._defaults.items()) +
                       [('max_nexp',np.inf)]
     )
 
