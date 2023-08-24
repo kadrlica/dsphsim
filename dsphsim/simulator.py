@@ -156,7 +156,7 @@ class Simulator(object):
         egroup2.add_argument('--rs',type=float,default=None,
                            help='scale radius for NFW halo (kpc)')
         egroup1.add_argument('--rhos',type=float,default=None,
-                            help='scale density for NFW halo (Msun/pc^3)')
+                            help='scale density for NFW halo (Msun/kpc^3)')
          
         group = parser.add_argument_group('Isochrone')
         group.add_argument('--isochrone',type=str,default='Bressan2012',
